@@ -37,39 +37,56 @@
   </a>
 </p>
 
-> **注意**：这是 [thedotmack/claude-mem](https://github.com/thedotmack/claude-mem) 的自定义 Fork，由 [OCDcreator](https://github.com/OCDcreator) 维护。除上游全部功能外，本仓库增加了额外的 Web UI 增强功能。
+> **注意**：这是 [thedotmack/claude-mem](https://github.com/thedotmack/claude-mem) 的自定义 Fork，由 [OCDcreator](https://github.com/OCDcreator) 维护。它保留上游全部核心功能，并额外加入中文体验、Web UI 改造、Windows 启停稳定性修复和本机排障优化。
 
 ---
 
-## 本 Fork 相对上游的改动
+## 这个 Fork 和原版有什么区别？
 
-### 1. Web UI Header 国际化与仓库快捷按钮
+如果你只是想快速判断：**原版适合跟随官方上游；这个 Fork 更适合中文使用、Windows 本机长期运行和查看 Web UI 记忆内容。**
 
-在 Web 查看器（`http://localhost:37777`）的 header 右上角新增了三个按钮：
+| 方向 | 上游 `thedotmack/claude-mem` | 本 Fork `OCDcreator/claude-mem-fork` |
+|------|------------------------------|--------------------------------------|
+| 核心记忆能力 | 保留 | 完整保留 |
+| README | 英文为主，提供多语言文档入口 | 首页 README 改为中文说明，并突出 Fork 安装方式 |
+| Web UI 语言 | 原版英文 UI | 增加中英切换，语言偏好保存到本地 |
+| Web UI 入口 | 原版导航 | Header 增加上游仓库 / 本 Fork 仓库快捷入口 |
+| Web UI 社交入口 | 显示 Discord / X | 隐藏 Discord / X，界面更简洁 |
+| 卡片文案 | `Discovery`、`Session Summary` 等英文 | 增加更准确的中文文案，方便直接看记忆列表 |
+| 设置面板 | 英文设置项 | 设置弹窗和预览窗口继续补齐中文翻译 |
+| 上下文预览 | worker 生成的英文终端风格文本 | 前端 `lang` 透传到 worker，预览内容可输出中文 |
+| 日期时间 | 固定英文倾向 | 按当前语言 locale 输出 |
+| Worker 启停 | 原版逻辑 | 加固 Windows/macOS 进程枚举、健康检查、端口释放和关闭流程 |
+| 固定端口 `37777` | 可能被残留子进程占住 | 修复 `chroma-mcp` 子进程树残留导致的幽灵监听问题 |
+| Claude VSCode 启动 | hook 等待 worker 时可能拖到 60 秒超时 | `SessionStart` hook 改为短等待和快速跳过，避免卡住 Claude 启动握手 |
+| Hook 端口 | 原版 hook 行为 | hook 运行时读取 `~/.claude-mem/settings.json` 中的 worker 端口 |
+| 开发协作 | 上游说明 | 新增 `AGENTS.md` 和 Copilot 指令，记录本 Fork 的构建、测试、架构约束 |
 
-| 按钮 | 说明 |
-|------|------|
-| **语言切换** (`EN` / `中`) | 在中英文之间切换 UI 文本，语言偏好通过 `localStorage` 持久保存 |
-| **Upstream** (蓝色药丸) | 新标签页打开上游仓库 [thedotmack/claude-mem](https://github.com/thedotmack/claude-mem) |
-| **My Fork** (绿色药丸) | 新标签页打开本 Fork 仓库 [OCDcreator/claude-mem-fork](https://github.com/OCDcreator/claude-mem-fork) |
+### 本 Fork 主要改动
 
-**实现细节：**
+1. **中文优先的 Web UI**
+   - Web 查看器支持 `EN / 中` 切换。
+   - 观察记录、会话摘要、设置面板、终端预览等界面补齐中文文案。
+   - “发现 / 变更 / 会话摘要”等卡片类型更适合中文阅读。
 
-- 新增 `I18nContext` React Context，提供 `lang`、`toggleLang()`、`t()` 接口
-- 翻译键覆盖 header 内所有 title 和文本（文档、X、Discord、设置、控制台等）
-- 暗色终端风格：绿色边框语言按钮 + 蓝/绿药丸形仓库链接
-- Hover 效果：颜色反转 + 1px 上浮动画
-- 响应式：≤768px 时仓库链接文字折叠为纯图标；≤600px 时进一步紧凑
+2. **上下文预览中文化**
+   - 设置预览不再只是前端静态翻译。
+   - `lang` 会从 Viewer 传到 worker，再由 worker 生成对应语言的上下文文本。
+   - 终端风格预览里的图例、列说明、上下文节省提示等都能跟随中文模式。
 
-**涉及的文件变更：**
+3. **Windows / macOS 启停稳定性加固**
+   - 修复 Windows PowerShell 进程枚举和参数解析问题。
+   - 停止 worker 时会清理 SSE 客户端、HTTP socket 和 MCP 子进程。
+   - `chroma-mcp`、`uvx`、`uv`、`python` 子进程树会被完整回收，避免 `37777` 被幽灵监听占住。
 
-| 文件 | 变更 |
-|------|------|
-| `src/ui/viewer/context/I18nContext.tsx` | 新增 — 国际化 Context Provider |
-| `src/ui/viewer/components/Header.tsx` | 修改 — 添加三个按钮 + i18n |
-| `src/ui/viewer/App.tsx` | 修改 — 引入 `useI18n` |
-| `src/ui/viewer/index.tsx` | 修改 — 包裹 `<I18nProvider>` |
-| `src/ui/viewer-template.html` | 修改 — 新增 CSS 样式 + 响应式规则 |
+4. **Claude Code hook 启动防卡死**
+   - `SessionStart` 不再长时间等待 worker。
+   - worker 异常时 hook 会快速返回，让 Claude Code / Claude VSCode 先正常启动。
+   - 修复过 `startup() initialize handshake timed out after 60000ms` 这类启动超时问题。
+
+5. **Fork 开发记录**
+   - 所有长期 Fork 改动记录在 [`devlog.md`](devlog.md)。
+   - 仓库根目录新增 [`AGENTS.md`](AGENTS.md)，方便后续 AI/代理工具按本 Fork 规则修改。
 
 ---
 
