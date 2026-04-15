@@ -1,24 +1,33 @@
 # claude-mem-fork Dev Log
 
-更新日期：2026-04-15
+更新日期：2026-04-16
 
-## 对比基线
+## 对比范围
 
 - 上游仓库：`thedotmack/claude-mem`
-- 对比基线 commit：`1d7500604fe55cbde57875cb40e2cd431b1de2b3`
-- 当前 Fork 相对该基线的已提交 commit：
-  - `eb20a306` `feat(ui): add i18n language toggle and repo link buttons to header`
-  - `3eeb5b99` `docs: 重写 README 为中文，添加 Fork 改动说明`
-  - `18bfdf84` `docs: README 添加 Fork 本地安装说明`
+- 上游当前 HEAD：`4ddf57610abb731ad53109b3aa3f957445ee13fb`
+- Fork 与上游的共同基线：`1d7500604fe55cbde57875cb40e2cd431b1de2b3`
+- 本日志记录 `1d750060..HEAD` 之间，本 Fork 相对上游的长期改动
 
-## 已提交的 Fork 改动
+## Fork 提交序列
 
-### 1. Web Viewer 头部增强与中英切换
+- `eb20a306` `feat(ui): add i18n language toggle and repo link buttons to header`
+- `3eeb5b99` `docs: 重写 README 为中文，添加 Fork 改动说明`
+- `18bfdf84` `docs: README 添加 Fork 本地安装说明`
+- `6fd145b6` `feat(fork): localize viewer and harden worker startup`
+- `e07190ca` `feat(fork): polish viewer copy and harden worker shutdown`
+- `7e48cfd5` `chore: add Windows network diagnostics files to gitignore`
+- `84a4ed5f` `fix(worker): kill chroma subprocess tree on shutdown`
+- `10044ec3` `fix(worker): avoid sessionstart handshake stalls`
+- `88be18d4` `docs(dev): add fork agent instructions`
 
-- 在 Viewer Header 中加入语言切换按钮。
-- 增加上游仓库与个人 Fork 仓库快捷入口。
-- 引入 `I18nContext`，为 Header 与相关 UI 文案提供中英文切换能力。
-- 更新 `App.tsx`、`index.tsx`、`viewer-template.html` 与 `viewer-bundle.js`，让新 UI 与构建产物保持一致。
+## 变更主题
+
+### 1. Viewer Header 与基础中英切换
+
+- Viewer Header 增加中英切换按钮。
+- 增加上游仓库与 Fork 仓库入口按钮。
+- 引入 `I18nContext`，为 Viewer UI 提供基础双语能力。
 
 涉及文件：
 
@@ -30,12 +39,12 @@
 - `plugin/ui/viewer.html`
 - `plugin/ui/viewer-bundle.js`
 
-### 2. 文档本地化与 Fork 安装说明
+### 2. README 中文化与 Fork 安装说明
 
-- README 重写为中文说明，明确这是一个自定义 Fork。
-- README 中补充相对上游的改动说明。
-- README 中补充本地构建、同步安装、GitHub 安装等使用方式。
-- 同步更新 `.claude-plugin/plugin.json` 与 `.codex-plugin/plugin.json` 中的插件元数据指向。
+- README 改为中文说明，明确这是自定义 Fork。
+- 补充 Fork 相对上游的改动说明。
+- 补充本地构建、同步安装、GitHub 安装等使用方式。
+- 同步插件元数据中的仓库信息。
 
 涉及文件：
 
@@ -43,120 +52,130 @@
 - `.claude-plugin/plugin.json`
 - `.codex-plugin/plugin.json`
 
-### 3. 插件运行脚本与构建产物同步
+### 3. 上下文预览与设置面板汉化
 
-- Fork 中的运行脚本与打包产物已同步更新，确保 Viewer/UI 改动能够在插件安装后直接生效。
-- 当前相对上游的 diff 中包含 `context-generator.cjs`、`mcp-server.cjs`、`worker-service.cjs` 等生成物或运行脚本差异，属于 Fork 当前发布内容的一部分。
+- `lang` 参数从前端一直透传到 worker 端上下文渲染链路。
+- Header / Timeline / Summary / Footer / HumanFormatter 全链路支持中文输出。
+- 设置面板、终端预览、卡片文案补齐中文翻译。
+- 日期时间按 locale 输出，而不是固定英文格式。
+- Header 中 Discord / X 入口已隐藏。
 
 涉及文件：
 
-- `plugin/scripts/context-generator.cjs`
-- `plugin/scripts/mcp-server.cjs`
-- `plugin/scripts/worker-service.cjs`
-
-## 当前未提交的本地改动
-
-截至今天，工作区还有以下未提交内容：
-
-- `src/ui/viewer/components/Header.tsx`
-  - 隐藏了 Discord 与 X 相关入口。
-- `src/ui/viewer/context/I18nContext.tsx`
-  - 扩充了设置面板与预览窗口相关翻译词条。
-  - 增加语言初始化迁移逻辑，兼容旧版本遗留的英文默认值。
 - `src/ui/viewer/components/ContextSettingsModal.tsx`
-  - 将设置弹窗中此前未汉化的标题、选项、提示文案和占位符继续接入 i18n。
+- `src/ui/viewer/components/Header.tsx`
+- `src/ui/viewer/components/ObservationCard.tsx`
+- `src/ui/viewer/components/PromptCard.tsx`
+- `src/ui/viewer/components/SummaryCard.tsx`
 - `src/ui/viewer/components/TerminalPreview.tsx`
-  - 将预览窗口自身的 `Wrap`、`Scroll`、`Loading preview...` 一并接入 i18n。
+- `src/ui/viewer/context/I18nContext.tsx`
 - `src/ui/viewer/hooks/useContextPreview.ts`
-  - 为设置预览接口追加 `lang` 参数，让左侧预览内容也能跟随中英文切换。
 - `src/services/worker/http/routes/SearchRoutes.ts`
-  - 设置预览接口向后端上下文生成器透传 `lang`。
-- `src/services/context/types.ts`
-  - 为上下文生成输入新增 `lang` 字段。
+- `src/services/worker/http/routes/ViewerRoutes.ts`
 - `src/services/context/ContextBuilder.ts`
-  - 将 `lang` 与 locale 贯穿到 header、timeline、summary、footer、empty state 的渲染链路。
 - `src/services/context/formatters/HumanFormatter.ts`
-  - 将设置预览左侧“终端风格上下文预览”中的固定英文文案抽成中英双语文案。
-  - 包括 `recent context`、`Legend`、`Column Key`、`Context Economics`、`Previously` 等。
 - `src/services/context/sections/HeaderRenderer.ts`
-- `src/services/context/sections/FooterRenderer.ts`
-- `src/services/context/sections/SummaryRenderer.ts`
 - `src/services/context/sections/TimelineRenderer.ts`
-  - 将 `lang` / locale 贯穿到各分段渲染器。
-  - 使日期、时间与 summary 时间显示在中文模式下使用中文本地化格式。
+- `src/services/context/sections/SummaryRenderer.ts`
+- `src/services/context/sections/FooterRenderer.ts`
+- `src/services/context/types.ts`
 - `src/shared/timeline-formatting.ts`
-  - 补充按 locale 输出日期/时间的格式化函数。
-- `src/services/infrastructure/ProcessManager.ts`
-  - 修复 Windows 下 worker 启动时“孤儿进程枚举/清理”命令的 PowerShell/WQL 引号拼接问题。
-  - 改为 `execFile(powershell, args[])` 执行，避免字符串拼接造成的参数解析错误。
 - `plugin/ui/viewer-bundle.js`
-  - 与上述前端改动对应的最新打包产物。
+- `plugin/ui/viewer.html`
 - `plugin/scripts/context-generator.cjs`
-- `plugin/scripts/mcp-server.cjs`
 - `plugin/scripts/worker-service.cjs`
-  - 与上述上下文预览多语言、Windows 进程清理修复对应的最新构建产物。
+
+### 4. Worker 启停稳定性与 Windows 兼容修复
+
+- 修复 Windows 下进程清理与启动相关逻辑，减少僵尸进程和端口残留。
+- 健康检查、端口释放等待、SSE 连接收尾、HTTP socket 销毁等链路已加固。
+- `SessionStart` hook 改为更短等待与快速跳过策略，避免把 Claude VSCode 的启动握手拖到 60 秒超时。
+- Windows daemon 启动增加 fallback：`Start-Process` 失败时退回 `spawn(..., detached)`。
+
+涉及文件：
+
+- `src/services/infrastructure/ProcessManager.ts`
+- `src/services/infrastructure/HealthMonitor.ts`
+- `src/services/infrastructure/GracefulShutdown.ts`
+- `src/services/worker-spawner.ts`
+- `src/services/worker-service.ts`
+- `src/services/server/Server.ts`
+- `src/shared/worker-utils.ts`
+- `src/services/worker/SSEBroadcaster.ts`
 - `plugin/hooks/hooks.json`
-  - 将 SessionStart 阶段的健康检查端口从写死的 `37777` 改为运行时读取 `~/.claude-mem/settings.json` 中的 `CLAUDE_MEM_WORKER_PORT`。
-  - 避免仓库源码在重新安装插件时覆盖掉本机已修复的动态端口行为。
+- `plugin/scripts/worker-service.cjs`
+- `plugin/scripts/mcp-server.cjs`
 
-## 这轮问题定位结论
+### 5. Chroma MCP 关闭链路彻底清理
 
-这次排查并不是单纯的“设置面板漏翻译”，而是两个链路叠加：
+- 识别到 `37777` 幽灵监听的根因是 `chroma-mcp` 子进程树未被正确回收。
+- 停止 worker 时先抓取完整 descendant tree，再等待退出。
+- 若优雅关闭失败，则强制终止残余 `uvx / uv / chroma-mcp / python` 进程树。
+- 仅在确认退出后才清理 supervisor 记录，避免假清理。
 
-- 前端设置面板本身存在未接入 i18n 的文案。
-- 左侧上下文预览并不是前端静态文本，而是 worker 端实时生成的终端风格上下文摘要，因此也需要单独接入语言参数。
+涉及文件：
 
-另外，在本机 Windows 环境中还暴露出一个更底层的稳定性问题：
+- `src/services/sync/ChromaMcpManager.ts`
+- `src/services/infrastructure/ProcessManager.ts`
+- `src/services/infrastructure/GracefulShutdown.ts`
+- `plugin/scripts/worker-service.cjs`
+- `plugin/scripts/mcp-server.cjs`
+- `tests/services/sync/chroma-mcp-manager-stop.test.ts`
+- `tests/infrastructure/graceful-shutdown.test.ts`
+- `tests/infrastructure/health-monitor.test.ts`
+- `tests/infrastructure/process-manager.test.ts`
+- `tests/shared/worker-utils.test.ts`
+- `tests/worker/sse-broadcaster.test.ts`
 
-- worker 启动时的 orphan cleanup / aggressive startup cleanup 在 Windows 上使用了手拼的 PowerShell 命令。
-- 该命令中的 WQL `-Filter` 引号嵌套会在某些情况下解析失败。
-- 日志中可稳定复现：
-  - `Failed to enumerate orphaned processes during aggressive cleanup`
-  - `Get-CimInstance ... A positional parameter cannot be found ...`
-- 这个问题会导致旧 worker / chroma / mcp 残留状态无法被正确清理，进而诱发端口仍在监听、重启异常、Web UI 健康检查超时等现象。
+### 6. Hook 与端口配置行为调整
 
-## 跨平台兼容性说明
+- Hook 健康检查不再依赖写死端口，而是运行时读取 `settings.json` 中的 `CLAUDE_MEM_WORKER_PORT`。
+- `SessionStart` 的启动 hook 现在只负责短时间探活，不再长时间阻塞。
+- context hook 仅在 worker 已健康时注入上下文，避免启动期误报。
 
-这次修复不是“只适配 Windows”，而是按平台分支收敛问题：
+涉及文件：
 
-- macOS / Linux 既有逻辑保留不变：
-  - orphan cleanup 仍使用 Unix 分支的 `ps -eo pid,etime,command`。
-  - kill 路径仍使用 `process.kill(...)`。
-  - Bun daemon 的 Unix/macOS `spawn` / `setsid` 路径未被改动。
-- Windows 分支单独修复：
-  - 只把 PowerShell 调用从手拼 shell 字符串改为 `execFile()` 参数化调用。
-  - 修的是 Windows 引号与参数解析问题，不会影响 macOS/Unix 现有流程。
-- Hook 端口读取改为跨平台的 Node 读取配置文件：
-  - `plugin/hooks/hooks.json` 不再写死端口。
-  - 继续通过 POSIX shell 执行，但端口值由 Node 从 `settings.json` 读取，因此对 macOS 与 Windows 上的安装配置都能保持一致。
-- 上下文预览国际化为通用改动：
-  - `lang` 由前端传到 worker，再由 worker 渲染不同语言。
-  - 这条链路对 Windows 和 macOS 都适用。
-  - 日期/时间改为 locale 感知输出，不依赖单一平台。
+- `plugin/hooks/hooks.json`
+- `src/shared/worker-utils.ts`
+- `src/services/infrastructure/HealthMonitor.ts`
+- `plugin/scripts/worker-service.cjs`
 
-## 今天的本地安装修复记录
+### 7. 仓库开发说明补充
 
-这部分改动主要发生在本机安装目录，不属于仓库内源码提交，但需要记录：
+- 新增仓库根 `AGENTS.md`，约束构建、测试、架构与编译产物编辑规则。
+- 更新 `.github/copilot-instructions.md`，补充本 Fork 的开发与架构说明，方便 AI/代理工具在仓库内工作。
 
-- 已修复本机 Claude Code 安装版 `claude-mem` 的 `hooks.json`。
-  - 之前 hook 健康检查写死为 `37777`。
-  - 现已改为从 `~/.claude-mem/settings.json` 动态读取 `CLAUDE_MEM_WORKER_PORT`。
-- 排障过程中临时切换过本机 worker 端口，用于绕开已损坏的历史监听状态。
-- 但最终定位结论是：
-  - “反复换端口”不是根治方案。
-  - 根因是 Windows 下 worker 启动时的 orphan cleanup PowerShell/WQL 引号拼接错误。
-- 已清理卡住的 `start/stop` 残留进程并重建 `supervisor.json` 状态。
-- 已将修复后的 `viewer-bundle.js`、`worker-service.cjs`、`context-generator.cjs` 同步到本机 Claude Code 安装目录进行验证。
-- 在修复后的版本上，设置预览接口已能返回中文内容，例如：
-  - `近期上下文`
-  - `图例`
-  - `列说明`
-  - `上下文经济性`
+涉及文件：
 
-## 备注
+- `AGENTS.md`
+- `.github/copilot-instructions.md`
 
-- 如果后续继续修改 Viewer UI，记得同步更新 `plugin/ui/viewer-bundle.js`。
-- 如果打算把今天的设置面板汉化、社交入口隐藏、预览区多语言与 Windows 启动修复正式纳入 Fork，建议拆成至少两个 commit：
-  - 一个用于 UI / i18n。
-  - 一个用于 worker / ProcessManager 稳定性修复。
-- 本机目前观察到的“幽灵监听 PID”更像是这次修复前历史残留的 Windows 状态；修复后的代码应能避免继续制造同类问题，但已经坏掉的本机状态仍可能需要完全退出 Claude Code，必要时重启系统后再验证。
+### 8. 其他 Fork 维护项
+
+- 将 Windows 抓包/网络诊断导出文件加入 `.gitignore`。
+
+涉及文件：
+
+- `.gitignore`
+
+## 验证结论
+
+- 当前 Fork 已验证通过的关键方向：
+  - Viewer 中英切换与中文文案渲染
+  - 设置预览的 `lang` 透传与中文上下文输出
+  - Windows / macOS 双端进程枚举兼容
+  - `37777` 固定端口下的 worker 启停闭环
+  - `chroma-mcp` 子进程树清理
+  - `SessionStart` hook 冷启动不再拖垮 Claude VSCode 启动握手
+
+- 代表性验证包括：
+  - `bun test tests/infrastructure/process-manager.test.ts tests/services/sync/chroma-mcp-manager-stop.test.ts tests/infrastructure/graceful-shutdown.test.ts tests/infrastructure/health-monitor.test.ts tests/worker/sse-broadcaster.test.ts`
+  - `node scripts/build-hooks.js`
+
+## 维护约定
+
+- 修改 `src/` 后，必须重新执行 `npm run build` 或 `node scripts/build-hooks.js`，同步生成：
+  - `plugin/scripts/*.cjs`
+  - `plugin/ui/viewer-bundle.js`
+  - `plugin/ui/viewer.html`
+- 不直接手改编译产物；仓库中的产物差异应来自源码变更后的重新构建。
