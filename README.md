@@ -11,140 +11,77 @@
 </h1>
 
 <p align="center">
-  <a href="docs/i18n/README.zh.md">🇨🇳 中文</a> •
+  <a href="docs/i18n/README.zh.md">🇨🇳 简体中文</a> •
   <a href="docs/i18n/README.zh-tw.md">🇹🇼 繁體中文</a> •
   <a href="docs/i18n/README.ja.md">🇯🇵 日本語</a> •
-  <a href="docs/i18n/README.pt.md">🇵🇹 Português</a> •
-  <a href="docs/i18n/README.pt-br.md">🇧🇷 Português</a> •
   <a href="docs/i18n/README.ko.md">🇰🇷 한국어</a> •
   <a href="docs/i18n/README.es.md">🇪🇸 Español</a> •
   <a href="docs/i18n/README.de.md">🇩🇪 Deutsch</a> •
   <a href="docs/i18n/README.fr.md">🇫🇷 Français</a> •
-  <a href="docs/i18n/README.he.md">🇮🇱 עברית</a> •
-  <a href="docs/i18n/README.ar.md">🇸🇦 العربية</a> •
   <a href="docs/i18n/README.ru.md">🇷🇺 Русский</a> •
-  <a href="docs/i18n/README.pl.md">🇵🇱 Polski</a> •
-  <a href="docs/i18n/README.cs.md">🇨🇿 Čeština</a> •
-  <a href="docs/i18n/README.nl.md">🇳🇱 Nederlands</a> •
-  <a href="docs/i18n/README.tr.md">🇹🇷 Türkçe</a> •
-  <a href="docs/i18n/README.uk.md">🇺🇦 Українська</a> •
-  <a href="docs/i18n/README.vi.md">🇻🇳 Tiếng Việt</a> •
-  <a href="docs/i18n/README.tl.md">🇵🇭 Tagalog</a> •
-  <a href="docs/i18n/README.id.md">🇮🇩 Indonesia</a> •
-  <a href="docs/i18n/README.th.md">🇹🇭 ไทย</a> •
-  <a href="docs/i18n/README.hi.md">🇮🇳 हिन्दी</a> •
-  <a href="docs/i18n/README.bn.md">🇧🇩 বাংলা</a> •
-  <a href="docs/i18n/README.ur.md">🇵🇰 اردو</a> •
-  <a href="docs/i18n/README.ro.md">🇷🇴 Română</a> •
-  <a href="docs/i18n/README.sv.md">🇸🇪 Svenska</a> •
-  <a href="docs/i18n/README.it.md">🇮🇹 Italiano</a> •
-  <a href="docs/i18n/README.el.md">🇬🇷 Ελληνικά</a> •
-  <a href="docs/i18n/README.hu.md">🇭🇺 Magyar</a> •
-  <a href="docs/i18n/README.fi.md">🇫🇮 Suomi</a> •
-  <a href="docs/i18n/README.da.md">🇩🇰 Dansk</a> •
-  <a href="docs/i18n/README.no.md">🇳🇴 Norsk</a>
+  <a href="docs/i18n/README.pt-br.md">🇧🇷 Português</a> •
+  <a href="docs/i18n/README.it.md">🇮🇹 Italiano</a>
 </p>
 
-<h4 align="center">Persistent memory compression system built for <a href="https://claude.com/claude-code" target="_blank">Claude Code</a>.</h4>
+<h4 align="center">基于 <a href="https://claude.com/claude-code" target="_blank">Claude Code</a> 构建的持久化记忆压缩系统 — <a href="https://github.com/OCDcreator/claude-mem-fork">自定义 Fork</a></h4>
 
 <p align="center">
   <a href="LICENSE">
     <img src="https://img.shields.io/badge/License-AGPL%203.0-blue.svg" alt="License">
   </a>
-  <a href="package.json">
-    <img src="https://img.shields.io/badge/version-6.5.0-green.svg" alt="Version">
+  <a href="https://github.com/thedotmack/claude-mem">
+    <img src="https://img.shields.io/badge/上游-thedotmack/claude--mem-blue.svg" alt="Upstream">
   </a>
   <a href="package.json">
     <img src="https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen.svg" alt="Node">
   </a>
-  <a href="https://github.com/thedotmack/awesome-claude-code">
-    <img src="https://awesome.re/mentioned-badge.svg" alt="Mentioned in Awesome Claude Code">
-  </a>
 </p>
 
-<p align="center">
-  <a href="https://trendshift.io/repositories/15496" target="_blank">
-    <picture>
-      <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/thedotmack/claude-mem/main/docs/public/trendshift-badge-dark.svg">
-      <source media="(prefers-color-scheme: light)" srcset="https://raw.githubusercontent.com/thedotmack/claude-mem/main/docs/public/trendshift-badge.svg">
-      <img src="https://raw.githubusercontent.com/thedotmack/claude-mem/main/docs/public/trendshift-badge.svg" alt="thedotmack/claude-mem | Trendshift" width="250" height="55"/>
-    </picture>
-  </a>
-</p>
-
-<br>
-
-<table align="center">
-  <tr>
-    <td align="center">
-      <a href="https://github.com/thedotmack/claude-mem">
-        <picture>
-          <img
-            src="https://raw.githubusercontent.com/thedotmack/claude-mem/main/docs/public/cm-preview.gif"
-            alt="Claude-Mem Preview"
-            width="500"
-          >
-        </picture>
-      </a>
-    </td>
-    <td align="center">
-      <a href="https://www.star-history.com/#thedotmack/claude-mem&Date">
-        <picture>
-          <source
-            media="(prefers-color-scheme: dark)"
-            srcset="https://api.star-history.com/image?repos=thedotmack/claude-mem&type=date&theme=dark&legend=top-left"
-          />
-          <source
-            media="(prefers-color-scheme: light)"
-            srcset="https://api.star-history.com/image?repos=thedotmack/claude-mem&type=date&legend=top-left"
-          />
-          <img
-            alt="Star History Chart"
-            src="https://api.star-history.com/image?repos=thedotmack/claude-mem&type=date&legend=top-left"
-            width="500"
-          />
-        </picture>
-      </a>
-    </td>
-  </tr>
-</table>
-
-<p align="center">
-  <a href="#quick-start">Quick Start</a> •
-  <a href="#how-it-works">How It Works</a> •
-  <a href="#mcp-search-tools">Search Tools</a> •
-  <a href="#documentation">Documentation</a> •
-  <a href="#configuration">Configuration</a> •
-  <a href="#troubleshooting">Troubleshooting</a> •
-  <a href="#license">License</a>
-</p>
-
-<p align="center">
-  Claude-Mem seamlessly preserves context across sessions by automatically capturing tool usage observations, generating semantic summaries, and making them available to future sessions. This enables Claude to maintain continuity of knowledge about projects even after sessions end or reconnect.
-</p>
+> **注意**：这是 [thedotmack/claude-mem](https://github.com/thedotmack/claude-mem) 的自定义 Fork，由 [OCDcreator](https://github.com/OCDcreator) 维护。除上游全部功能外，本仓库增加了额外的 Web UI 增强功能。
 
 ---
 
-## Quick Start
+## 本 Fork 相对上游的改动
 
-Install with a single command:
+### 1. Web UI Header 国际化与仓库快捷按钮
+
+在 Web 查看器（`http://localhost:37777`）的 header 右上角新增了三个按钮：
+
+| 按钮 | 说明 |
+|------|------|
+| **语言切换** (`EN` / `中`) | 在中英文之间切换 UI 文本，语言偏好通过 `localStorage` 持久保存 |
+| **Upstream** (蓝色药丸) | 新标签页打开上游仓库 [thedotmack/claude-mem](https://github.com/thedotmack/claude-mem) |
+| **My Fork** (绿色药丸) | 新标签页打开本 Fork 仓库 [OCDcreator/claude-mem-fork](https://github.com/OCDcreator/claude-mem-fork) |
+
+**实现细节：**
+
+- 新增 `I18nContext` React Context，提供 `lang`、`toggleLang()`、`t()` 接口
+- 翻译键覆盖 header 内所有 title 和文本（文档、X、Discord、设置、控制台等）
+- 暗色终端风格：绿色边框语言按钮 + 蓝/绿药丸形仓库链接
+- Hover 效果：颜色反转 + 1px 上浮动画
+- 响应式：≤768px 时仓库链接文字折叠为纯图标；≤600px 时进一步紧凑
+
+**涉及的文件变更：**
+
+| 文件 | 变更 |
+|------|------|
+| `src/ui/viewer/context/I18nContext.tsx` | 新增 — 国际化 Context Provider |
+| `src/ui/viewer/components/Header.tsx` | 修改 — 添加三个按钮 + i18n |
+| `src/ui/viewer/App.tsx` | 修改 — 引入 `useI18n` |
+| `src/ui/viewer/index.tsx` | 修改 — 包裹 `<I18nProvider>` |
+| `src/ui/viewer-template.html` | 修改 — 新增 CSS 样式 + 响应式规则 |
+
+---
+
+## 快速开始
+
+单条命令安装：
 
 ```bash
 npx claude-mem install
 ```
 
-Or install for Gemini CLI (auto-detects `~/.gemini`):
-
-```bash
-npx claude-mem install --ide gemini-cli
-```
-Or install for OpenCode:
-
-```bash
-npx claude-mem install --ide opencode
-```
-
-Or install from the plugin marketplace inside Claude Code:
+或者从 Claude Code 内部插件市场安装：
 
 ```bash
 /plugin marketplace add thedotmack/claude-mem
@@ -152,170 +89,58 @@ Or install from the plugin marketplace inside Claude Code:
 /plugin install claude-mem
 ```
 
-Restart Claude Code or Gemini CLI. Context from previous sessions will automatically appear in new sessions.
+重启 Claude Code，之前会话的上下文将自动出现在新会话中。
 
-> **Note:** Claude-Mem is also published on npm, but `npm install -g claude-mem` installs the **SDK/library only** — it does not register the plugin hooks or set up the worker service. Always install via `npx claude-mem install` or the `/plugin` commands above.
-
-### 🦞 OpenClaw Gateway
-
-Install claude-mem as a persistent memory plugin on [OpenClaw](https://openclaw.ai) gateways with a single command:
-
-```bash
-curl -fsSL https://install.cmem.ai/openclaw.sh | bash
-```
-
-The installer handles dependencies, plugin setup, AI provider configuration, worker startup, and optional real-time observation feeds to Telegram, Discord, Slack, and more. See the [OpenClaw Integration Guide](https://docs.claude-mem.ai/openclaw-integration) for details.
-
-**Key Features:**
-
-- 🧠 **Persistent Memory** - Context survives across sessions
-- 📊 **Progressive Disclosure** - Layered memory retrieval with token cost visibility
-- 🔍 **Skill-Based Search** - Query your project history with mem-search skill
-- 🖥️ **Web Viewer UI** - Real-time memory stream at http://localhost:37777
-- 💻 **Claude Desktop Skill** - Search memory from Claude Desktop conversations
-- 🔒 **Privacy Control** - Use `<private>` tags to exclude sensitive content from storage
-- ⚙️ **Context Configuration** - Fine-grained control over what context gets injected
-- 🤖 **Automatic Operation** - No manual intervention required
-- 🔗 **Citations** - Reference past observations with IDs (access via http://localhost:37777/api/observation/{id} or view all in the web viewer at http://localhost:37777)
-- 🧪 **Beta Channel** - Try experimental features like Endless Mode via version switching
+> **注意**：Claude-Mem 也发布在 npm 上，但 `npm install -g claude-mem` 只安装 **SDK/库**——不会注册插件钩子或启动 worker 服务。请始终通过 `npx claude-mem install` 或上述 `/plugin` 命令安装。
 
 ---
 
-## Documentation
+## 核心功能
 
-📚 **[View Full Documentation](https://docs.claude-mem.ai/)** - Browse on official website
-
-### Getting Started
-
-- **[Installation Guide](https://docs.claude-mem.ai/installation)** - Quick start & advanced installation
-- **[Gemini CLI Setup](https://docs.claude-mem.ai/gemini-cli/setup)** - Dedicated guide for Google's Gemini CLI integration
-- **[Usage Guide](https://docs.claude-mem.ai/usage/getting-started)** - How Claude-Mem works automatically
-- **[Search Tools](https://docs.claude-mem.ai/usage/search-tools)** - Query your project history with natural language
-- **[Beta Features](https://docs.claude-mem.ai/beta-features)** - Try experimental features like Endless Mode
-
-### Best Practices
-
-- **[Context Engineering](https://docs.claude-mem.ai/context-engineering)** - AI agent context optimization principles
-- **[Progressive Disclosure](https://docs.claude-mem.ai/progressive-disclosure)** - Philosophy behind Claude-Mem's context priming strategy
-
-### Architecture
-
-- **[Overview](https://docs.claude-mem.ai/architecture/overview)** - System components & data flow
-- **[Architecture Evolution](https://docs.claude-mem.ai/architecture-evolution)** - The journey from v3 to v5
-- **[Hooks Architecture](https://docs.claude-mem.ai/hooks-architecture)** - How Claude-Mem uses lifecycle hooks
-- **[Hooks Reference](https://docs.claude-mem.ai/architecture/hooks)** - 7 hook scripts explained
-- **[Worker Service](https://docs.claude-mem.ai/architecture/worker-service)** - HTTP API & Bun management
-- **[Database](https://docs.claude-mem.ai/architecture/database)** - SQLite schema & FTS5 search
-- **[Search Architecture](https://docs.claude-mem.ai/architecture/search-architecture)** - Hybrid search with Chroma vector database
-
-### Configuration & Development
-
-- **[Configuration](https://docs.claude-mem.ai/configuration)** - Environment variables & settings
-- **[Development](https://docs.claude-mem.ai/development)** - Building, testing, contributing
-- **[Troubleshooting](https://docs.claude-mem.ai/troubleshooting)** - Common issues & solutions
+- 🧠 **持久化记忆** — 上下文跨会话保留
+- 📊 **渐进式展示** — 分层记忆检索，带 token 开销可见性
+- 🔍 **技能搜索** — 通过 mem-search 技能查询项目历史
+- 🖥️ **Web 查看器** — `http://localhost:37777` 实时记忆流
+- 🔒 **隐私控制** — 使用 `<private>` 标签排除敏感内容
+- ⚙️ **上下文配置** — 细粒度控制注入哪些上下文
+- 🤖 **自动运行** — 无需手动干预
+- 🌐 **UI 国际化** — Web 查看器支持中英文切换（本 Fork 新增）
 
 ---
 
-## How It Works
+## 工作原理
 
-**Core Components:**
+**核心组件：**
 
-1. **5 Lifecycle Hooks** - SessionStart, UserPromptSubmit, PostToolUse, Stop, SessionEnd (6 hook scripts)
-2. **Smart Install** - Cached dependency checker (pre-hook script, not a lifecycle hook)
-3. **Worker Service** - HTTP API on port 37777 with web viewer UI and 10 search endpoints, managed by Bun
-4. **SQLite Database** - Stores sessions, observations, summaries
-5. **mem-search Skill** - Natural language queries with progressive disclosure
-6. **Chroma Vector Database** - Hybrid semantic + keyword search for intelligent context retrieval
+1. **5 个生命周期钩子** — SessionStart、UserPromptSubmit、PostToolUse、Stop、SessionEnd
+2. **Worker 服务** — 端口 37777 上的 HTTP API + Web 查看器，由 Bun 管理
+3. **SQLite 数据库** — 存储会话、观察记录、摘要
+4. **mem-search 技能** — 自然语言查询，渐进式展示
+5. **Chroma 向量数据库** — 语义 + 关键词混合搜索
 
-See [Architecture Overview](https://docs.claude-mem.ai/architecture/overview) for details.
-
----
-
-## MCP Search Tools
-
-Claude-Mem provides intelligent memory search through **4 MCP tools** following a token-efficient **3-layer workflow pattern**:
-
-**The 3-Layer Workflow:**
-
-1. **`search`** - Get compact index with IDs (~50-100 tokens/result)
-2. **`timeline`** - Get chronological context around interesting results
-3. **`get_observations`** - Fetch full details ONLY for filtered IDs (~500-1,000 tokens/result)
-
-**How It Works:**
-- Claude uses MCP tools to search your memory
-- Start with `search` to get an index of results
-- Use `timeline` to see what was happening around specific observations
-- Use `get_observations` to fetch full details for relevant IDs
-- **~10x token savings** by filtering before fetching details
-
-**Available MCP Tools:**
-
-1. **`search`** - Search memory index with full-text queries, filters by type/date/project
-2. **`timeline`** - Get chronological context around a specific observation or query
-3. **`get_observations`** - Fetch full observation details by IDs (always batch multiple IDs)
-
-**Example Usage:**
-
-```typescript
-// Step 1: Search for index
-search(query="authentication bug", type="bugfix", limit=10)
-
-// Step 2: Review index, identify relevant IDs (e.g., #123, #456)
-
-// Step 3: Fetch full details
-get_observations(ids=[123, 456])
-```
-
-See [Search Tools Guide](https://docs.claude-mem.ai/usage/search-tools) for detailed examples.
+详见 [架构概览](https://docs.claude-mem.ai/architecture/overview)。
 
 ---
 
-## Beta Features
+## 系统要求
 
-Claude-Mem offers a **beta channel** with experimental features like **Endless Mode** (biomimetic memory architecture for extended sessions). Switch between stable and beta versions from the web viewer UI at http://localhost:37777 → Settings.
-
-See **[Beta Features Documentation](https://docs.claude-mem.ai/beta-features)** for details on Endless Mode and how to try it.
-
----
-
-## System Requirements
-
-- **Node.js**: 18.0.0 or higher
-- **Claude Code**: Latest version with plugin support
-- **Bun**: JavaScript runtime and process manager (auto-installed if missing)
-- **uv**: Python package manager for vector search (auto-installed if missing)
-- **SQLite 3**: For persistent storage (bundled)
-
----
-### Windows Setup Notes
-
-If you see an error like:
-
-```powershell
-npm : The term 'npm' is not recognized as the name of a cmdlet
-```
-
-Make sure Node.js and npm are installed and added to your PATH. Download the latest Node.js installer from https://nodejs.org and restart your terminal after installation.
+- **Node.js**：18.0.0 或更高版本
+- **Claude Code**：支持插件的最新版本
+- **Bun**：JavaScript 运行时和进程管理器（缺失时自动安装）
+- **uv**：向量搜索所需的 Python 包管理器（缺失时自动安装）
+- **SQLite 3**：持久化存储（已内置）
 
 ---
 
-## Configuration
+## 配置
 
-Settings are managed in `~/.claude-mem/settings.json` (auto-created with defaults on first run). Configure AI model, worker port, data directory, log level, and context injection settings.
+设置文件位于 `~/.claude-mem/settings.json`（首次运行时自动创建）。
 
-See the **[Configuration Guide](https://docs.claude-mem.ai/configuration)** for all available settings and examples.
+详见 [配置指南](https://docs.claude-mem.ai/configuration)。
 
-### Mode & Language Configuration
+### 模式与语言配置
 
-Claude-Mem supports multiple workflow modes and languages via the `CLAUDE_MEM_MODE` setting.
-
-This option controls both:
-- The workflow behavior (e.g. code, chill, investigation)
-- The language used in generated observations
-
-#### How to Configure
-
-Edit your settings file at `~/.claude-mem/settings.json`:
+通过 `CLAUDE_MEM_MODE` 设置支持多种工作流模式和语言：
 
 ```json
 {
@@ -323,100 +148,74 @@ Edit your settings file at `~/.claude-mem/settings.json`:
 }
 ```
 
-Modes are defined in `plugin/modes/`. To see all available modes locally:
+| 模式 | 说明 |
+|------|------|
+| `code` | 默认英文模式 |
+| `code--zh` | 简体中文模式 |
+| `code--ja` | 日文模式 |
+
+修改后重启 Claude Code 生效。
+
+---
+
+## 文档
+
+📚 **[查看完整文档](https://docs.claude-mem.ai/)**
+
+- [安装指南](https://docs.claude-mem.ai/installation)
+- [使用指南](https://docs.claude-mem.ai/usage/getting-started)
+- [搜索工具](https://docs.claude-mem.ai/usage/search-tools)
+- [架构概览](https://docs.claude-mem.ai/architecture/overview)
+- [开发指南](https://docs.claude-mem.ai/development)
+- [故障排除](https://docs.claude-mem.ai/troubleshooting)
+
+---
+
+## 故障排除
+
+遇到问题时，向 Claude 描述问题，排障技能会自动诊断并提供修复方案。
+
+详见 [故障排除指南](https://docs.claude-mem.ai/troubleshooting)。
+
+---
+
+## 构建与开发
 
 ```bash
-ls ~/.claude/plugins/marketplaces/thedotmack/plugin/modes/
+npm install
+npm run build
 ```
 
-#### Available Modes
-
-| Mode | Description |
-|------------|-------------------------|
-| `code` | Default English mode |
-| `code--zh` | Simplified Chinese mode |
-| `code--ja` | Japanese mode |
-
-Language-specific modes follow the pattern `code--[lang]` where `[lang]` is the ISO 639-1 language code (e.g., `zh` for Chinese, `ja` for Japanese, `es` for Spanish).
-
-> Note: `code--zh` (Simplified Chinese) is already built-in — no additional installation or plugin update is required.
-
-#### After Changing Mode
-
-Restart Claude Code to apply the new mode configuration.
----
-
-## Development
-
-See the **[Development Guide](https://docs.claude-mem.ai/development)** for build instructions, testing, and contribution workflow.
+详见 [开发指南](https://docs.claude-mem.ai/development)。
 
 ---
 
-## Troubleshooting
+## 许可证
 
-If experiencing issues, describe the problem to Claude and the troubleshoot skill will automatically diagnose and provide fixes.
-
-See the **[Troubleshooting Guide](https://docs.claude-mem.ai/troubleshooting)** for common issues and solutions.
-
----
-
-## Bug Reports
-
-Create comprehensive bug reports with the automated generator:
-
-```bash
-cd ~/.claude/plugins/marketplaces/thedotmack
-npm run bug-report
-```
-
-## Contributing
-
-Contributions are welcome! Please:
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes with tests
-4. Update documentation
-5. Submit a Pull Request
-
-See [Development Guide](https://docs.claude-mem.ai/development) for contribution workflow.
-
----
-
-## License
-
-This project is licensed under the **GNU Affero General Public License v3.0** (AGPL-3.0).
+本项目基于 **GNU Affero General Public License v3.0** (AGPL-3.0) 许可。
 
 Copyright (C) 2025 Alex Newman (@thedotmack). All rights reserved.
 
-See the [LICENSE](LICENSE) file for full details.
-
-**What This Means:**
-
-- You can use, modify, and distribute this software freely
-- If you modify and deploy on a network server, you must make your source code available
-- Derivative works must also be licensed under AGPL-3.0
-- There is NO WARRANTY for this software
-
-**Note on Ragtime**: The `ragtime/` directory is licensed separately under the **PolyForm Noncommercial License 1.0.0**. See [ragtime/LICENSE](ragtime/LICENSE) for details.
+详见 [LICENSE](LICENSE) 文件。
 
 ---
 
-## Support
+## 致谢
 
-- **Documentation**: [docs/](docs/)
-- **Issues**: [GitHub Issues](https://github.com/thedotmack/claude-mem/issues)
-- **Repository**: [github.com/thedotmack/claude-mem](https://github.com/thedotmack/claude-mem)
-- **Official X Account**: [@Claude_Memory](https://x.com/Claude_Memory)
-- **Official Discord**: [Join Discord](https://discord.com/invite/J4wttp9vDu)
-- **Author**: Alex Newman ([@thedotmack](https://github.com/thedotmack))
+- **上游项目**：[thedotmack/claude-mem](https://github.com/thedotmack/claude-mem) by Alex Newman
+- **本 Fork 维护者**：[OCDcreator](https://github.com/OCDcreator)
+
+---
+
+## 支持
+
+- **文档**：[docs.claude-mem.ai](https://docs.claude-mem.ai/)
+- **上游 Issues**：[GitHub Issues](https://github.com/thedotmack/claude-mem/issues)
+- **Fork Issues**：[Fork Issues](https://github.com/OCDcreator/claude-mem-fork/issues)
+- **官方 X**：[@Claude_Memory](https://x.com/Claude_Memory)
+- **官方 Discord**：[加入 Discord](https://discord.com/invite/J4wttp9vDu)
+- **上游作者**：Alex Newman ([@thedotmack](https://github.com/thedotmack))
 
 ---
 
 **Built with Claude Agent SDK** | **Powered by Claude Code** | **Made with TypeScript**
-
----
-
-### What About $CMEM?
-
-$CMEM is a solana token created by a 3rd party without Claude-Mem's prior consent, but officially embraced by the creator of Claude-Mem (Alex Newman, @thedotmack). The token acts as a community catalyst for growth and a vehicle for bringing real-time agent data to the developers and knowledge workers that need it most. $CMEM: 2TsmuYUrsctE57VLckZBYEEzdokUF8j8e1GavekWBAGS
