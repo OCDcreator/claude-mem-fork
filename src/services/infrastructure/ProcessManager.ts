@@ -397,14 +397,10 @@ export async function getListeningPortOwner(port: number): Promise<PortOwnerInfo
 }
 
 /**
- * Get all child process PIDs (Windows-specific)
+ * Get immediate child process PIDs
  * Used for cleanup to prevent zombie ports when parent exits
  */
 export async function getChildProcesses(parentPid: number): Promise<number[]> {
-  if (process.platform !== 'win32') {
-    return [];
-  }
-
   // SECURITY: Validate PID is a positive integer to prevent command injection
   if (!Number.isInteger(parentPid) || parentPid <= 0) {
     logger.warn('SYSTEM', 'Invalid parent PID for child process enumeration', { parentPid });
@@ -412,10 +408,21 @@ export async function getChildProcesses(parentPid: number): Promise<number[]> {
   }
 
   try {
-    // Use WQL -Filter to avoid $_ pipeline syntax that breaks in Git Bash (#1062, #1024).
-    // Get-CimInstance with server-side filtering is also more efficient than piping through Where-Object.
-    const cmd = `powershell -NoProfile -NonInteractive -Command "Get-CimInstance Win32_Process -Filter 'ParentProcessId=${parentPid}' | Select-Object -ExpandProperty ProcessId"`;
-    const { stdout } = await execAsync(cmd, { timeout: HOOK_TIMEOUTS.POWERSHELL_COMMAND, windowsHide: true });
+    let stdout: string;
+
+    if (process.platform === 'win32') {
+      // Use WQL -Filter to avoid $_ pipeline syntax that breaks in Git Bash (#1062, #1024).
+      // Get-CimInstance with server-side filtering is also more efficient than piping through Where-Object.
+      const cmd = `powershell -NoProfile -NonInteractive -Command "Get-CimInstance Win32_Process -Filter 'ParentProcessId=${parentPid}' | Select-Object -ExpandProperty ProcessId"`;
+      ({ stdout } = await execAsync(cmd, { timeout: HOOK_TIMEOUTS.POWERSHELL_COMMAND, windowsHide: true }));
+    } else {
+      ({ stdout } = await execFileAsync(
+        'pgrep',
+        ['-P', String(parentPid)],
+        { timeout: HOOK_TIMEOUTS.POWERSHELL_COMMAND, windowsHide: true }
+      ));
+    }
+
     return stdout
       .split('\n')
       .map(line => line.trim())
@@ -427,6 +434,34 @@ export async function getChildProcesses(parentPid: number): Promise<number[]> {
     logger.error('SYSTEM', 'Failed to enumerate child processes', { parentPid }, error as Error);
     return [];
   }
+}
+
+export async function getDescendantProcesses(parentPid: number): Promise<number[]> {
+  if (!Number.isInteger(parentPid) || parentPid <= 0) {
+    logger.warn('SYSTEM', 'Invalid parent PID for descendant process enumeration', { parentPid });
+    return [];
+  }
+
+  const descendants: number[] = [];
+  const seen = new Set<number>([parentPid]);
+  const queue = await getChildProcesses(parentPid);
+
+  while (queue.length > 0) {
+    const pid = queue.shift()!;
+    if (seen.has(pid)) continue;
+
+    seen.add(pid);
+    descendants.push(pid);
+
+    const children = await getChildProcesses(pid);
+    for (const childPid of children) {
+      if (!seen.has(childPid)) {
+        queue.push(childPid);
+      }
+    }
+  }
+
+  return descendants;
 }
 
 /**

@@ -74,7 +74,7 @@ export async function performGracefulShutdown(config: GracefulShutdownConfig): P
   // STEP 4: Stop Chroma MCP connection
   if (config.chromaMcpManager) {
     logger.info('SHUTDOWN', 'Stopping Chroma MCP connection...');
-    await runShutdownStep('chromaMcpManager.stop', () => config.chromaMcpManager!.stop(), 10_000);
+    await runShutdownStep('chromaMcpManager.stop', () => config.chromaMcpManager!.stop(), 20_000);
     logger.info('SHUTDOWN', 'Chroma MCP connection stopped');
   }
 

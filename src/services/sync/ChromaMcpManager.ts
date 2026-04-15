@@ -23,11 +23,15 @@ import { SettingsDefaultsManager } from '../../shared/SettingsDefaultsManager.js
 import { USER_SETTINGS_PATH } from '../../shared/paths.js';
 import { sanitizeEnv } from '../../supervisor/env-sanitizer.js';
 import { getSupervisor } from '../../supervisor/index.js';
+import { isPidAlive } from '../../supervisor/process-registry.js';
+import { forceKillProcess, getDescendantProcesses } from '../infrastructure/ProcessManager.js';
 
 const CHROMA_MCP_CLIENT_NAME = 'claude-mem-chroma';
 const CHROMA_MCP_CLIENT_VERSION = '1.0.0';
 const MCP_CONNECTION_TIMEOUT_MS = 30_000;
 const RECONNECT_BACKOFF_MS = 10_000; // Don't retry connections faster than this after failure
+const SUBPROCESS_EXIT_WAIT_MS = 2_000;
+const SUBPROCESS_FORCE_KILL_WAIT_MS = 5_000;
 const DEFAULT_CHROMA_DATA_DIR = path.join(os.homedir(), '.claude-mem', 'chroma');
 const CHROMA_SUPERVISOR_ID = 'chroma-mcp';
 
@@ -337,6 +341,12 @@ export class ChromaMcpManager {
       return;
     }
 
+    const chromaProcess = this.getManagedProcess();
+    const chromaPid = chromaProcess?.pid;
+    const chromaProcessTree = chromaPid
+      ? [chromaPid, ...(await getDescendantProcesses(chromaPid))]
+      : [];
+
     logger.info('CHROMA_MCP', 'Stopping chroma-mcp MCP connection');
 
     try {
@@ -345,7 +355,38 @@ export class ChromaMcpManager {
       logger.debug('CHROMA_MCP', 'Error during client close (subprocess may already be dead)', {}, error as Error);
     }
 
-    getSupervisor().unregisterProcess(CHROMA_SUPERVISOR_ID);
+    if (this.transport) {
+      try {
+        await this.transport.close();
+      } catch (error) {
+        logger.debug('CHROMA_MCP', 'Error during transport close (subprocess may already be dead)', {}, error as Error);
+      }
+    }
+
+    let chromaExited = await this.waitForProcessTreeExit(chromaProcessTree, SUBPROCESS_EXIT_WAIT_MS);
+    if (!chromaExited && chromaProcessTree.length > 0) {
+      const alivePids = chromaProcessTree.filter(pid => isPidAlive(pid));
+      logger.warn('CHROMA_MCP', 'chroma-mcp process tree still alive after graceful close, forcing termination', {
+        pids: alivePids
+      });
+
+      for (const pid of alivePids) {
+        if (isPidAlive(pid)) {
+          await forceKillProcess(pid);
+        }
+      }
+
+      chromaExited = await this.waitForProcessTreeExit(chromaProcessTree, SUBPROCESS_FORCE_KILL_WAIT_MS);
+    }
+
+    if (chromaExited) {
+      getSupervisor().unregisterProcess(CHROMA_SUPERVISOR_ID);
+    } else if (chromaPid) {
+      logger.warn('CHROMA_MCP', 'chroma-mcp subprocess survived forced termination, leaving supervisor entry for shutdown cascade', {
+        pid: chromaPid
+      });
+    }
+
     this.client = null;
     this.transport = null;
     this.connected = false;
@@ -466,7 +507,7 @@ export class ChromaMcpManager {
   }
 
   private registerManagedProcess(): void {
-    const chromaProcess = (this.transport as unknown as { _process?: import('child_process').ChildProcess })._process;
+    const chromaProcess = this.getManagedProcess();
     if (!chromaProcess?.pid) {
       return;
     }
@@ -480,5 +521,26 @@ export class ChromaMcpManager {
     chromaProcess.once('exit', () => {
       getSupervisor().unregisterProcess(CHROMA_SUPERVISOR_ID);
     });
+  }
+
+  private getManagedProcess(): import('child_process').ChildProcess | undefined {
+    return (this.transport as unknown as { _process?: import('child_process').ChildProcess })._process;
+  }
+
+  private async waitForProcessTreeExit(pids: number[], timeoutMs: number): Promise<boolean> {
+    if (pids.length === 0) {
+      return true;
+    }
+
+    const deadline = Date.now() + timeoutMs;
+
+    while (Date.now() < deadline) {
+      if (pids.every(pid => !isPidAlive(pid))) {
+        return true;
+      }
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+
+    return pids.every(pid => !isPidAlive(pid));
   }
 }
