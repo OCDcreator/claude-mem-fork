@@ -557,6 +557,90 @@
       font-size: 13px;
     }
 
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .repo-links {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .repo-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 8px 14px;
+      border: 1px solid #333;
+      background: linear-gradient(180deg, #171717 0%, #0a0a0a 100%);
+      color: #d9d9d9;
+      text-decoration: none;
+      transition:
+        transform 0.2s,
+        border-color 0.2s,
+        color 0.2s,
+        box-shadow 0.2s,
+        background 0.2s;
+      border-radius: 999px;
+      font-size: 12px;
+      letter-spacing: 0.4px;
+      white-space: nowrap;
+    }
+
+    .repo-link:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.05);
+    }
+
+    .repo-link .icon {
+      width: 16px;
+      height: 16px;
+    }
+
+    .repo-link-upstream {
+      border-color: #2f5f73;
+      color: #7fdfff;
+    }
+
+    .repo-link-upstream:hover {
+      background: #7fdfff;
+      border-color: #7fdfff;
+      color: #0a0a0a;
+    }
+
+    .repo-link-fork {
+      border-color: #1f6b42;
+      color: #7effaa;
+    }
+
+    .repo-link-fork:hover {
+      background: #7effaa;
+      border-color: #7effaa;
+      color: #0a0a0a;
+    }
+
+    .lang-toggle {
+      background: #0a0a0a;
+      border: 1px solid #00ff00;
+      color: #00ff00;
+      padding: 4px 12px;
+      font-family: inherit;
+      font-size: 12px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.2s;
+      letter-spacing: 1px;
+    }
+
+    .lang-toggle:hover {
+      background: #00ff00;
+      color: #0a0a0a;
+    }
+
     .source-tabs {
       display: inline-flex;
       align-items: center;
@@ -1592,6 +1676,22 @@
         display: none;
       }
 
+      .repo-link span {
+        display: none;
+      }
+
+      .repo-link {
+        padding: 6px 8px;
+      }
+
+      .header-actions {
+        gap: 6px;
+      }
+
+      .repo-links {
+        gap: 4px;
+      }
+
       /* Sidebar full width on tablet */
       .sidebar {
       }
@@ -1620,6 +1720,23 @@
       /* Hide GitHub stars button on mobile */
       .github-stars-btn {
         display: none;
+      }
+
+      /* Hide repo links text on mobile, keep lang toggle */
+      .repo-link span {
+        display: none;
+      }
+
+      .repo-link {
+        padding: 6px 8px;
+      }
+
+      .header-actions {
+        gap: 6px;
+      }
+
+      .repo-links {
+        gap: 4px;
       }
     }
 
