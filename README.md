@@ -73,25 +73,51 @@
 
 ---
 
-## 快速开始
+## 安装本 Fork 插件
 
-单条命令安装：
+### 方式一：本地构建 + 同步（推荐）
+
+克隆本仓库后，在项目根目录执行：
+
+```bash
+npm install
+npm run build-and-sync
+```
+
+这会构建全部产物并直接同步到 `~/.claude/plugins/marketplaces/thedotmack/`，同时自动重启 worker 服务。
+
+### 方式二：本地 npx 安装
+
+```bash
+npm install
+npm run build
+npx . install
+```
+
+等效于 `npx claude-mem install`，但使用的是你本地 Fork 的代码。
+
+### 方式三：从 GitHub 安装（供其他人使用）
+
+```bash
+npx github:OCDcreator/claude-mem-fork install
+```
+
+> **注意**：以上方式均会将插件安装到 `~/.claude/plugins/marketplaces/thedotmack/`，会覆盖已安装的原版 claude-mem。安装后重启 Claude Code 即可生效。
+
+---
+
+### 安装原版上游（如果你需要原版）
 
 ```bash
 npx claude-mem install
 ```
 
-或者从 Claude Code 内部插件市场安装：
+或在 Claude Code 内：
 
 ```bash
 /plugin marketplace add thedotmack/claude-mem
-
 /plugin install claude-mem
 ```
-
-重启 Claude Code，之前会话的上下文将自动出现在新会话中。
-
-> **注意**：Claude-Mem 也发布在 npm 上，但 `npm install -g claude-mem` 只安装 **SDK/库**——不会注册插件钩子或启动 worker 服务。请始终通过 `npx claude-mem install` 或上述 `/plugin` 命令安装。
 
 ---
 
