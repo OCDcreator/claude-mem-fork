@@ -28,11 +28,14 @@ import {
   removePidFile,
   spawnDaemon,
   touchPidFile,
+  getListeningPortOwner,
+  forceKillProcess,
 } from './infrastructure/ProcessManager.js';
 import {
   isPortInUse,
   waitForHealth,
   waitForReadiness,
+  waitForPortFree,
 } from './infrastructure/HealthMonitor.js';
 
 // Windows: avoid repeated spawn popups when startup fails (issue #921)
@@ -167,8 +170,29 @@ export async function ensureWorkerStarted(
       logger.info('SYSTEM', 'Worker is now healthy');
       return true;
     }
-    logger.error('SYSTEM', 'Port in use but worker not responding to health checks');
-    return false;
+
+    const portOwner = await getListeningPortOwner(port);
+    if (portOwner && portOwner.pid !== process.pid) {
+      logger.warn('SYSTEM', 'Port is occupied by an unhealthy listener, forcing cleanup before respawn', {
+        port,
+        pid: portOwner.pid,
+        processName: portOwner.processName,
+        commandLine: portOwner.commandLine
+      });
+
+      await forceKillProcess(portOwner.pid);
+      const freed = await waitForPortFree(port, getPlatformTimeout(10000));
+      if (!freed) {
+        logger.error('SYSTEM', 'Port remained occupied after killing unhealthy listener', {
+          port,
+          pid: portOwner.pid
+        });
+        return false;
+      }
+    } else {
+      logger.error('SYSTEM', 'Port in use but worker not responding to health checks');
+      return false;
+    }
   }
 
   // Windows: skip spawn if a recent attempt already failed (issue #921)

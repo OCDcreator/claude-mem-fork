@@ -14,11 +14,19 @@ import type { SSEEvent, SSEClient } from '../worker-types.js';
 
 export class SSEBroadcaster {
   private sseClients: Set<SSEClient> = new Set();
+  private shuttingDown = false;
 
   /**
    * Add a new SSE client connection
    */
   addClient(res: Response): void {
+    if (this.shuttingDown) {
+      res.status(503);
+      res.setHeader('Connection', 'close');
+      res.end();
+      return;
+    }
+
     this.sseClients.add(res);
     logger.debug('WORKER', 'Client connected', { total: this.sseClients.size });
 
@@ -64,6 +72,53 @@ export class SSEBroadcaster {
    */
   getClientCount(): number {
     return this.sseClients.size;
+  }
+
+  isShuttingDown(): boolean {
+    return this.shuttingDown;
+  }
+
+  shutdown(): number {
+    this.shuttingDown = true;
+
+    let closed = 0;
+    for (const client of this.sseClients) {
+      try {
+        client.write('event: shutdown\ndata: {"type":"shutdown"}\n\n');
+      } catch {
+        // Best effort.
+      }
+
+      try {
+        client.end();
+      } catch {
+        // Best effort.
+      }
+
+      try {
+        client.socket?.end();
+      } catch {
+        // Best effort.
+      }
+
+      try {
+        client.socket?.destroySoon?.();
+      } catch {
+        // Best effort.
+      }
+
+      try {
+        client.socket?.destroy();
+      } catch {
+        // Best effort.
+      }
+
+      closed++;
+    }
+
+    this.sseClients.clear();
+    logger.info('WORKER', 'Closed SSE clients for shutdown', { closed });
+    return closed;
   }
 
   /**

@@ -1,5 +1,5 @@
 import path from "path";
-import { readFileSync } from "fs";
+import { readFileSync, statSync } from "fs";
 import { logger } from "../utils/logger.js";
 import { HOOK_TIMEOUTS, getTimeout } from "./hook-constants.js";
 import { SettingsDefaultsManager } from "./SettingsDefaultsManager.js";
@@ -41,9 +41,54 @@ export function fetchWithTimeout(url: string, init: RequestInit = {}, timeoutMs:
   });
 }
 
-// Cache to avoid repeated settings file reads
-let cachedPort: number | null = null;
-let cachedHost: string | null = null;
+interface CachedWorkerEndpointSettings {
+  settingsPath: string;
+  settingsMtimeMs: number | null;
+  port: number;
+  host: string;
+}
+
+// Cache the last-seen settings file snapshot, but automatically invalidate it
+// when ~/.claude-mem/settings.json changes. This avoids repeated JSON parsing in
+// hot hook paths while preventing long-lived processes (notably mcp-server) from
+// pinning a stale worker port forever after the user updates settings.
+let cachedWorkerEndpointSettings: CachedWorkerEndpointSettings | null = null;
+
+function getWorkerSettingsPath(): string {
+  return path.join(SettingsDefaultsManager.get('CLAUDE_MEM_DATA_DIR'), 'settings.json');
+}
+
+function getSettingsMtimeMs(settingsPath: string): number | null {
+  try {
+    return statSync(settingsPath).mtimeMs;
+  } catch {
+    return null;
+  }
+}
+
+function getWorkerEndpointSettings(): CachedWorkerEndpointSettings {
+  const settingsPath = getWorkerSettingsPath();
+  const settingsMtimeMs = getSettingsMtimeMs(settingsPath);
+
+  if (
+    cachedWorkerEndpointSettings !== null
+    && cachedWorkerEndpointSettings.settingsPath === settingsPath
+    && cachedWorkerEndpointSettings.settingsMtimeMs === settingsMtimeMs
+  ) {
+    return cachedWorkerEndpointSettings;
+  }
+
+  const settings = SettingsDefaultsManager.loadFromFile(settingsPath);
+  const resolved = {
+    settingsPath,
+    settingsMtimeMs: getSettingsMtimeMs(settingsPath),
+    port: parseInt(settings.CLAUDE_MEM_WORKER_PORT, 10),
+    host: settings.CLAUDE_MEM_WORKER_HOST
+  };
+
+  cachedWorkerEndpointSettings = resolved;
+  return resolved;
+}
 
 /**
  * Get the worker port number from settings
@@ -51,14 +96,7 @@ let cachedHost: string | null = null;
  * Caches the port value to avoid repeated file reads
  */
 export function getWorkerPort(): number {
-  if (cachedPort !== null) {
-    return cachedPort;
-  }
-
-  const settingsPath = path.join(SettingsDefaultsManager.get('CLAUDE_MEM_DATA_DIR'), 'settings.json');
-  const settings = SettingsDefaultsManager.loadFromFile(settingsPath);
-  cachedPort = parseInt(settings.CLAUDE_MEM_WORKER_PORT, 10);
-  return cachedPort;
+  return getWorkerEndpointSettings().port;
 }
 
 /**
@@ -67,14 +105,7 @@ export function getWorkerPort(): number {
  * Caches the host value to avoid repeated file reads
  */
 export function getWorkerHost(): string {
-  if (cachedHost !== null) {
-    return cachedHost;
-  }
-
-  const settingsPath = path.join(SettingsDefaultsManager.get('CLAUDE_MEM_DATA_DIR'), 'settings.json');
-  const settings = SettingsDefaultsManager.loadFromFile(settingsPath);
-  cachedHost = settings.CLAUDE_MEM_WORKER_HOST;
-  return cachedHost;
+  return getWorkerEndpointSettings().host;
 }
 
 /**
@@ -82,8 +113,7 @@ export function getWorkerHost(): string {
  * Call this when settings are updated to force re-reading from file.
  */
 export function clearPortCache(): void {
-  cachedPort = null;
-  cachedHost = null;
+  cachedWorkerEndpointSettings = null;
 }
 
 /**

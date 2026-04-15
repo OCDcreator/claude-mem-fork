@@ -11,6 +11,7 @@
 
 import express, { Request, Response, Application } from 'express';
 import http from 'http';
+import net from 'net';
 import * as fs from 'fs';
 import path from 'path';
 import { ALLOWED_OPERATIONS, ALLOWED_TOPICS } from './allowed-constants.js';
@@ -70,10 +71,14 @@ export interface ServerOptions {
  * Provides centralized setup for middleware and routes
  */
 export class Server {
+  private static readonly CLOSE_GRACE_MS = 2_000;
+  private static readonly CLOSE_FORCE_MS = 5_000;
+
   readonly app: Application;
   private server: http.Server | null = null;
   private readonly options: ServerOptions;
   private readonly startTime: number = Date.now();
+  private readonly sockets: Set<net.Socket> = new Set();
 
   constructor(options: ServerOptions) {
     this.options = options;
@@ -98,6 +103,15 @@ export class Server {
         logger.info('SYSTEM', 'HTTP server started', { host, port, pid: process.pid });
         resolve();
       });
+      this.server.keepAliveTimeout = 1_000;
+      this.server.headersTimeout = 5_000;
+      this.server.requestTimeout = 15_000;
+      this.server.on('connection', (socket: net.Socket) => {
+        this.sockets.add(socket);
+        socket.on('close', () => {
+          this.sockets.delete(socket);
+        });
+      });
       this.server.on('error', reject);
     });
   }
@@ -108,25 +122,71 @@ export class Server {
   async close(): Promise<void> {
     if (!this.server) return;
 
+    const server = this.server;
+    this.server = null;
+
+    const closePromise = new Promise<void>((resolve, reject) => {
+      server.close(err => {
+        if (!err) {
+          resolve();
+          return;
+        }
+
+        const code = (err as NodeJS.ErrnoException).code;
+        if (code === 'ERR_SERVER_NOT_RUNNING') {
+          resolve();
+          return;
+        }
+
+        reject(err);
+      });
+    });
+
+    if (typeof server.closeIdleConnections === 'function') {
+      server.closeIdleConnections();
+    }
+
     // Close all active connections
-    this.server.closeAllConnections();
+    if (typeof server.closeAllConnections === 'function') {
+      server.closeAllConnections();
+    }
+
+    const eagerlyDestroyed = this.destroyTrackedSockets();
+    if (eagerlyDestroyed > 0) {
+      logger.info('SYSTEM', 'Destroyed tracked sockets before waiting for server close', {
+        destroyedSockets: eagerlyDestroyed
+      });
+    }
 
     // Give Windows time to close connections before closing server
     if (process.platform === 'win32') {
       await new Promise(r => setTimeout(r, 500));
     }
 
-    // Close the server
-    await new Promise<void>((resolve, reject) => {
-      this.server!.close(err => err ? reject(err) : resolve());
-    });
+    const closedGracefully = await this.waitForClose(closePromise, Server.CLOSE_GRACE_MS);
+
+    if (!closedGracefully) {
+      const destroyed = this.destroyTrackedSockets();
+      logger.warn('SYSTEM', 'HTTP server close did not complete in grace window, force-destroying sockets', {
+        destroyedSockets: destroyed
+      });
+
+      if (typeof server.closeAllConnections === 'function') {
+        server.closeAllConnections();
+      }
+
+      const closedAfterForce = await this.waitForClose(closePromise, Server.CLOSE_FORCE_MS);
+      if (!closedAfterForce) {
+        logger.warn('SYSTEM', 'HTTP server close still pending after forced socket cleanup');
+      }
+    }
 
     // Extra delay on Windows to ensure port is fully released
     if (process.platform === 'win32') {
       await new Promise(r => setTimeout(r, 500));
     }
 
-    this.server = null;
+    this.destroyTrackedSockets();
     logger.info('SYSTEM', 'HTTP server closed');
   }
 
@@ -239,6 +299,7 @@ export class Server {
 
     // Admin endpoints for process management (localhost-only)
     this.app.post('/api/admin/restart', requireLocalhost, async (_req: Request, res: Response) => {
+      res.setHeader('Connection', 'close');
       res.json({ status: 'restarting' });
 
       // Handle Windows managed mode via IPC
@@ -264,6 +325,7 @@ export class Server {
     });
 
     this.app.post('/api/admin/shutdown', requireLocalhost, async (_req: Request, res: Response) => {
+      res.setHeader('Connection', 'close');
       res.json({ status: 'shutting_down' });
 
       // Handle Windows managed mode via IPC
@@ -359,5 +421,50 @@ export class Server {
     if (endIdx === -1) return content.substring(startIdx);
 
     return content.substring(startIdx, endIdx).trim();
+  }
+
+  private async waitForClose(closePromise: Promise<void>, timeoutMs: number): Promise<boolean> {
+    try {
+      await Promise.race([
+        closePromise,
+        new Promise<never>((_, reject) => {
+          setTimeout(() => reject(new Error(`HTTP server close timeout after ${timeoutMs}ms`)), timeoutMs);
+        })
+      ]);
+      return true;
+    } catch (error) {
+      if (error instanceof Error && error.message.includes('HTTP server close timeout')) {
+        return false;
+      }
+      throw error;
+    }
+  }
+
+  private destroyTrackedSockets(): number {
+    let destroyed = 0;
+
+    for (const socket of this.sockets) {
+      try {
+        socket.end();
+      } catch {
+        // Best effort.
+      }
+
+      try {
+        socket.destroySoon?.();
+      } catch {
+        // Best effort.
+      }
+
+      try {
+        socket.destroy();
+        destroyed++;
+      } catch {
+        // Best effort.
+      }
+    }
+
+    this.sockets.clear();
+    return destroyed;
   }
 }

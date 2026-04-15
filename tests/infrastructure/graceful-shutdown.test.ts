@@ -252,5 +252,38 @@ describe('GracefulShutdown', () => {
       // Should not throw
       await expect(performGracefulShutdown(config)).resolves.toBeUndefined();
     });
+
+    it('should prefer closeServer when provided', async () => {
+      const callOrder: string[] = [];
+
+      const mockServer = {
+        closeAllConnections: mock(() => {
+          callOrder.push('closeAllConnections');
+        }),
+        close: mock((cb: (err?: Error) => void) => {
+          callOrder.push('server.close');
+          cb();
+        })
+      } as unknown as http.Server;
+
+      const mockSessionManager: ShutdownableService = {
+        shutdownAll: mock(async () => {
+          callOrder.push('sessionManager.shutdownAll');
+        })
+      };
+
+      const closeServer = mock(async () => {
+        callOrder.push('closeServer');
+      });
+
+      await performGracefulShutdown({
+        server: mockServer,
+        closeServer,
+        sessionManager: mockSessionManager
+      });
+
+      expect(callOrder).toEqual(['closeServer', 'sessionManager.shutdownAll']);
+      expect(closeServer).toHaveBeenCalledTimes(1);
+    });
   });
 });

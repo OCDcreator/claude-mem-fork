@@ -10,6 +10,7 @@
  */
 
 import path from 'path';
+import http from 'http';
 import net from 'net';
 import { readFileSync } from 'fs';
 import { logger } from '../../utils/logger.js';
@@ -22,17 +23,41 @@ import { MARKETPLACE_ROOT } from '../../shared/paths.js';
 async function httpRequestToWorker(
   port: number,
   endpointPath: string,
-  method: string = 'GET'
+  method: string = 'GET',
+  timeoutMs: number = 2_000
 ): Promise<{ ok: boolean; statusCode: number; body: string }> {
-  const response = await fetch(`http://127.0.0.1:${port}${endpointPath}`, { method });
-  // Gracefully handle cases where response body isn't available (e.g., test mocks)
-  let body = '';
-  try {
-    body = await response.text();
-  } catch {
-    // Body unavailable — health/readiness checks only need .ok
-  }
-  return { ok: response.ok, statusCode: response.status, body };
+  return new Promise((resolve, reject) => {
+    const request = http.request({
+      host: '127.0.0.1',
+      port,
+      path: endpointPath,
+      method,
+      agent: false,
+      headers: {
+        Connection: 'close'
+      }
+    }, (response) => {
+      let body = '';
+      response.setEncoding('utf8');
+      response.on('data', chunk => {
+        body += chunk;
+      });
+      response.on('end', () => {
+        resolve({
+          ok: (response.statusCode ?? 500) >= 200 && (response.statusCode ?? 500) < 300,
+          statusCode: response.statusCode ?? 500,
+          body
+        });
+      });
+    });
+
+    request.setTimeout(timeoutMs, () => {
+      request.destroy(new Error(`Request timed out after ${timeoutMs}ms`));
+    });
+
+    request.on('error', reject);
+    request.end();
+  });
 }
 
 /**
@@ -46,16 +71,29 @@ async function httpRequestToWorker(
  */
 export async function isPortInUse(port: number): Promise<boolean> {
   if (process.platform === 'win32') {
-    // APPROVED OVERRIDE: Windows keeps HTTP health check because socket bind
-    // semantics differ (SO_REUSEADDR defaults, firewall prompts). The TOCTOU
-    // race remains on Windows but is an accepted limitation — the atomic
-    // socket approach would cause false positives or UAC popups.
-    try {
-      const response = await fetch(`http://127.0.0.1:${port}/api/health`);
-      return response.ok;
-    } catch {
-      return false;
-    }
+    return new Promise((resolve) => {
+      const socket = new net.Socket();
+      let settled = false;
+
+      const finish = (result: boolean) => {
+        if (settled) return;
+        settled = true;
+        socket.destroy();
+        resolve(result);
+      };
+
+      socket.setTimeout(750);
+      socket.once('connect', () => finish(true));
+      socket.once('timeout', () => finish(false));
+      socket.once('error', (err: NodeJS.ErrnoException) => {
+        if (err.code === 'ECONNREFUSED') {
+          finish(false);
+          return;
+        }
+        finish(false);
+      });
+      socket.connect(port, '127.0.0.1');
+    });
   }
 
   // Unix: atomic socket bind check — no TOCTOU race

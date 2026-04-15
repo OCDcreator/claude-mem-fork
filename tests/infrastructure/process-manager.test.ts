@@ -239,16 +239,17 @@ describe('ProcessManager', () => {
     });
 
     it('should look up Bun on non-Windows when caller is Node (e.g. MCP server)', () => {
+      const expectedBunPath = path.join('/home/alice', '.bun', 'bin', 'bun');
       const resolved = resolveWorkerRuntimePath({
         platform: 'linux',
         execPath: '/usr/bin/node',
         env: {} as NodeJS.ProcessEnv,
         homeDirectory: '/home/alice',
-        pathExists: candidatePath => candidatePath === '/home/alice/.bun/bin/bun',
+        pathExists: candidatePath => candidatePath === expectedBunPath,
         lookupInPath: () => null
       });
 
-      expect(resolved).toBe('/home/alice/.bun/bin/bun');
+      expect(resolved).toBe(expectedBunPath);
     });
 
     it('should preserve bare BUN env command on non-Windows so spawn resolves it via PATH', () => {

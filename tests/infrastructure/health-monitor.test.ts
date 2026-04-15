@@ -1,4 +1,5 @@
-import { describe, it, expect, beforeEach, afterEach, mock, spyOn } from 'bun:test';
+import { describe, it, expect, afterEach, mock, spyOn } from 'bun:test';
+import http from 'http';
 import net from 'net';
 import {
   isPortInUse,
@@ -9,17 +10,43 @@ import {
 } from '../../src/services/infrastructure/index.js';
 
 describe('HealthMonitor', () => {
-  const originalFetch = global.fetch;
+  const originalPlatform = process.platform;
 
   afterEach(() => {
-    global.fetch = originalFetch;
+    Object.defineProperty(process, 'platform', {
+      value: originalPlatform,
+      writable: true,
+      configurable: true
+    });
   });
 
-  describe('isPortInUse', () => {
-    // Note: Since we are on Linux (as per session_context), isPortInUse uses 'net'
-    // instead of 'fetch'. We need to mock 'net.createServer().listen()'
+  async function startHttpServer(
+    handler: http.RequestListener,
+    port: number = 0
+  ): Promise<{ server: http.Server; port: number }> {
+    const server = http.createServer(handler);
+    await new Promise<void>((resolve) => server.listen(port, '127.0.0.1', () => resolve()));
+    const address = server.address();
+    if (!address || typeof address === 'string') {
+      throw new Error('Expected TCP server address');
+    }
+    return { server, port: address.port };
+  }
 
+  async function stopHttpServer(server: http.Server): Promise<void> {
+    await new Promise<void>((resolve, reject) => {
+      server.close((err) => err ? reject(err) : resolve());
+    });
+  }
+
+  describe('isPortInUse', () => {
     it('should return true for occupied port (EADDRINUSE)', async () => {
+      Object.defineProperty(process, 'platform', {
+        value: 'darwin',
+        writable: true,
+        configurable: true
+      });
+
       // Create a specific mock for this test
       const createServerMock = mock(() => ({
         once: mock((event: string, cb: Function) => {
@@ -42,6 +69,12 @@ describe('HealthMonitor', () => {
     });
 
     it('should return false for free port (listening succeeds)', async () => {
+      Object.defineProperty(process, 'platform', {
+        value: 'darwin',
+        writable: true,
+        configurable: true
+      });
+
       const closeMock = mock((cb: Function) => cb());
       const createServerMock = mock(() => ({
         once: mock((event: string, cb: Function) => {
@@ -66,6 +99,12 @@ describe('HealthMonitor', () => {
     });
 
     it('should return false for other socket errors', async () => {
+      Object.defineProperty(process, 'platform', {
+        value: 'darwin',
+        writable: true,
+        configurable: true
+      });
+
       const createServerMock = mock(() => ({
         once: mock((event: string, cb: Function) => {
           if (event === 'error') {
@@ -81,33 +120,91 @@ describe('HealthMonitor', () => {
       const result = await isPortInUse(37777);
 
       expect(result).toBe(false);
-      
+
       spy.mockRestore();
+    });
+
+    it('should detect occupied port on Windows via TCP connect', async () => {
+      Object.defineProperty(process, 'platform', {
+        value: 'win32',
+        writable: true,
+        configurable: true
+      });
+
+      const server = net.createServer();
+      await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', () => resolve()));
+      const address = server.address();
+      if (!address || typeof address === 'string') {
+        throw new Error('Expected TCP server address');
+      }
+
+      try {
+        const result = await isPortInUse(address.port);
+        expect(result).toBe(true);
+      } finally {
+        await new Promise<void>((resolve, reject) => {
+          server.close((err) => err ? reject(err) : resolve());
+        });
+      }
+    });
+
+    it('should detect free port on Windows without using fetch', async () => {
+      Object.defineProperty(process, 'platform', {
+        value: 'win32',
+        writable: true,
+        configurable: true
+      });
+
+      const tempServer = net.createServer();
+      await new Promise<void>((resolve) => tempServer.listen(0, '127.0.0.1', () => resolve()));
+      const address = tempServer.address();
+      if (!address || typeof address === 'string') {
+        throw new Error('Expected TCP server address');
+      }
+      const freePort = address.port;
+      await new Promise<void>((resolve, reject) => {
+        tempServer.close((err) => err ? reject(err) : resolve());
+      });
+
+      const result = await isPortInUse(freePort);
+
+      expect(result).toBe(false);
     });
   });
 
   describe('waitForHealth', () => {
     it('should succeed immediately when server responds', async () => {
-      global.fetch = mock(() => Promise.resolve({
-        ok: true,
-        status: 200,
-        text: () => Promise.resolve('')
-      } as unknown as Response));
+      const { server, port } = await startHttpServer((_req, res) => {
+        res.statusCode = 200;
+        res.end('ok');
+      });
 
-      const start = Date.now();
-      const result = await waitForHealth(37777, 5000);
-      const elapsed = Date.now() - start;
+      try {
+        const start = Date.now();
+        const result = await waitForHealth(port, 5000);
+        const elapsed = Date.now() - start;
 
-      expect(result).toBe(true);
-      // Should return quickly (within first poll cycle)
-      expect(elapsed).toBeLessThan(1000);
+        expect(result).toBe(true);
+        expect(elapsed).toBeLessThan(1000);
+      } finally {
+        await stopHttpServer(server);
+      }
     });
 
     it('should timeout when no server responds', async () => {
-      global.fetch = mock(() => Promise.reject(new Error('ECONNREFUSED')));
+      const tempServer = net.createServer();
+      await new Promise<void>((resolve) => tempServer.listen(0, '127.0.0.1', () => resolve()));
+      const address = tempServer.address();
+      if (!address || typeof address === 'string') {
+        throw new Error('Expected TCP server address');
+      }
+      const port = address.port;
+      await new Promise<void>((resolve, reject) => {
+        tempServer.close((err) => err ? reject(err) : resolve());
+      });
 
       const start = Date.now();
-      const result = await waitForHealth(39999, 1500);
+      const result = await waitForHealth(port, 1500);
       const elapsed = Date.now() - start;
 
       expect(result).toBe(false);
@@ -117,55 +214,64 @@ describe('HealthMonitor', () => {
     });
 
     it('should succeed after server becomes available', async () => {
-      let callCount = 0;
-      global.fetch = mock(() => {
-        callCount++;
-        // Fail first 2 calls, succeed on third
-        if (callCount < 3) {
-          return Promise.reject(new Error('ECONNREFUSED'));
-        }
-        return Promise.resolve({
-          ok: true,
-          status: 200,
-          text: () => Promise.resolve('')
-        } as unknown as Response);
+      const tempServer = net.createServer();
+      await new Promise<void>((resolve) => tempServer.listen(0, '127.0.0.1', () => resolve()));
+      const address = tempServer.address();
+      if (!address || typeof address === 'string') {
+        throw new Error('Expected TCP server address');
+      }
+      const port = address.port;
+      await new Promise<void>((resolve, reject) => {
+        tempServer.close((err) => err ? reject(err) : resolve());
       });
 
-      const result = await waitForHealth(37777, 5000);
+      const delayedServerPromise = (async () => {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        return startHttpServer((_req, res) => {
+          res.statusCode = 200;
+          res.end('ok');
+        }, port);
+      })();
 
-      expect(result).toBe(true);
-      expect(callCount).toBeGreaterThanOrEqual(3);
+      const result = await waitForHealth(port, 5000);
+      const { server } = await delayedServerPromise;
+
+      try {
+        expect(result).toBe(true);
+      } finally {
+        await stopHttpServer(server);
+      }
     });
 
     it('should check health endpoint for liveness', async () => {
-      const fetchMock = mock(() => Promise.resolve({
-        ok: true,
-        status: 200,
-        text: () => Promise.resolve('')
-      } as unknown as Response));
-      global.fetch = fetchMock;
+      let requestedPath = '';
+      const { server, port } = await startHttpServer((req, res) => {
+        requestedPath = req.url || '';
+        res.statusCode = 200;
+        res.end('ok');
+      });
 
-      await waitForHealth(37777, 1000);
-
-      // waitForHealth uses /api/health (liveness), not /api/readiness
-      // This is because hooks have 15-second timeout but full initialization can take 5+ minutes
-      // See: https://github.com/thedotmack/claude-mem/issues/811
-      const calls = fetchMock.mock.calls;
-      expect(calls.length).toBeGreaterThan(0);
-      expect(calls[0][0]).toBe('http://127.0.0.1:37777/api/health');
+      try {
+        await waitForHealth(port, 1000);
+        expect(requestedPath).toBe('/api/health');
+      } finally {
+        await stopHttpServer(server);
+      }
     });
 
     it('should use default timeout when not specified', async () => {
-      global.fetch = mock(() => Promise.resolve({
-        ok: true,
-        status: 200,
-        text: () => Promise.resolve('')
-      } as unknown as Response));
+      const { server, port } = await startHttpServer((_req, res) => {
+        res.statusCode = 200;
+        res.end('ok');
+      });
 
-      // Just verify it doesn't throw and returns quickly
-      const result = await waitForHealth(37777);
+      try {
+        const result = await waitForHealth(port);
 
-      expect(result).toBe(true);
+        expect(result).toBe(true);
+      } finally {
+        await stopHttpServer(server);
+      }
     });
   });
 
@@ -188,27 +294,43 @@ describe('HealthMonitor', () => {
 
   describe('checkVersionMatch', () => {
     it('should assume match when worker version is unavailable', async () => {
-      global.fetch = mock(() => Promise.reject(new Error('ECONNREFUSED')));
+      const tempServer = net.createServer();
+      await new Promise<void>((resolve) => tempServer.listen(0, '127.0.0.1', () => resolve()));
+      const address = tempServer.address();
+      if (!address || typeof address === 'string') {
+        throw new Error('Expected TCP server address');
+      }
+      const port = address.port;
+      await new Promise<void>((resolve, reject) => {
+        tempServer.close((err) => err ? reject(err) : resolve());
+      });
 
-      const result = await checkVersionMatch(39999);
+      const result = await checkVersionMatch(port);
 
       expect(result.matches).toBe(true);
       expect(result.workerVersion).toBeNull();
     });
 
     it('should detect version mismatch', async () => {
-      global.fetch = mock(() => Promise.resolve({
-        ok: true,
-        status: 200,
-        text: () => Promise.resolve(JSON.stringify({ version: '0.0.0-definitely-wrong' }))
-      } as unknown as Response));
+      const { server, port } = await startHttpServer((req, res) => {
+        if (req.url === '/api/version') {
+          res.statusCode = 200;
+          res.end(JSON.stringify({ version: '0.0.0-definitely-wrong' }));
+          return;
+        }
+        res.statusCode = 404;
+        res.end();
+      });
 
-      const result = await checkVersionMatch(37777);
+      const result = await checkVersionMatch(port);
 
-      // Unless the plugin version is also '0.0.0-definitely-wrong', this should be a mismatch
-      const pluginVersion = getInstalledPluginVersion();
-      if (pluginVersion !== 'unknown' && pluginVersion !== '0.0.0-definitely-wrong') {
-        expect(result.matches).toBe(false);
+      try {
+        const pluginVersion = getInstalledPluginVersion();
+        if (pluginVersion !== 'unknown' && pluginVersion !== '0.0.0-definitely-wrong') {
+          expect(result.matches).toBe(false);
+        }
+      } finally {
+        await stopHttpServer(server);
       }
     });
 
@@ -216,22 +338,36 @@ describe('HealthMonitor', () => {
       const pluginVersion = getInstalledPluginVersion();
       if (pluginVersion === 'unknown') return; // Skip if can't read plugin version
 
-      global.fetch = mock(() => Promise.resolve({
-        ok: true,
-        status: 200,
-        text: () => Promise.resolve(JSON.stringify({ version: pluginVersion }))
-      } as unknown as Response));
+      const { server, port } = await startHttpServer((req, res) => {
+        if (req.url === '/api/version') {
+          res.statusCode = 200;
+          res.end(JSON.stringify({ version: pluginVersion }));
+          return;
+        }
+        res.statusCode = 404;
+        res.end();
+      });
 
-      const result = await checkVersionMatch(37777);
+      const result = await checkVersionMatch(port);
 
-      expect(result.matches).toBe(true);
-      expect(result.pluginVersion).toBe(pluginVersion);
-      expect(result.workerVersion).toBe(pluginVersion);
+      try {
+        expect(result.matches).toBe(true);
+        expect(result.pluginVersion).toBe(pluginVersion);
+        expect(result.workerVersion).toBe(pluginVersion);
+      } finally {
+        await stopHttpServer(server);
+      }
     });
   });
 
   describe('waitForPortFree', () => {
     it('should return true immediately when port is already free', async () => {
+      Object.defineProperty(process, 'platform', {
+        value: 'darwin',
+        writable: true,
+        configurable: true
+      });
+
       const createServerMock = mock(() => ({
         once: mock((event: string, cb: Function) => {
           if (event === 'listening') setTimeout(() => cb(), 0);
@@ -251,6 +387,12 @@ describe('HealthMonitor', () => {
     });
 
     it('should timeout when port remains occupied', async () => {
+      Object.defineProperty(process, 'platform', {
+        value: 'darwin',
+        writable: true,
+        configurable: true
+      });
+
       const createServerMock = mock(() => ({
         once: mock((event: string, cb: Function) => {
           if (event === 'error') setTimeout(() => cb({ code: 'EADDRINUSE' }), 0);
@@ -270,6 +412,12 @@ describe('HealthMonitor', () => {
     });
 
     it('should succeed when port becomes free', async () => {
+      Object.defineProperty(process, 'platform', {
+        value: 'darwin',
+        writable: true,
+        configurable: true
+      });
+
       let callCount = 0;
       const spy = spyOn(net, 'createServer').mockImplementation(() => ({
         once: mock((event: string, cb: Function) => {
@@ -293,6 +441,12 @@ describe('HealthMonitor', () => {
     });
 
     it('should use default timeout when not specified', async () => {
+      Object.defineProperty(process, 'platform', {
+        value: 'darwin',
+        writable: true,
+        configurable: true
+      });
+
       const createServerMock = mock(() => ({
         once: mock((event: string, cb: Function) => {
           if (event === 'listening') setTimeout(() => cb(), 0);

@@ -186,6 +186,12 @@ export interface PidInfo {
   startedAt: string;
 }
 
+export interface PortOwnerInfo {
+  pid: number;
+  commandLine?: string;
+  processName?: string;
+}
+
 /**
  * Write PID info to the standard PID file location
  */
@@ -233,6 +239,161 @@ export function removePidFile(): void {
 export function getPlatformTimeout(baseMs: number): number {
   const WINDOWS_MULTIPLIER = 2.0;
   return process.platform === 'win32' ? Math.round(baseMs * WINDOWS_MULTIPLIER) : baseMs;
+}
+
+function parsePositiveInteger(value: string | undefined | null): number | null {
+  if (!value) return null;
+
+  const trimmed = value.trim();
+  if (!/^\d+$/.test(trimmed)) return null;
+
+  const parsed = parseInt(trimmed, 10);
+  return parsed > 0 ? parsed : null;
+}
+
+async function getWindowsProcessMetadata(pid: number): Promise<Pick<PortOwnerInfo, 'commandLine' | 'processName'>> {
+  try {
+    const stdout = await runPowerShell(
+      `$proc = Get-CimInstance Win32_Process -Filter "ProcessId=${pid}" -ErrorAction SilentlyContinue; if ($proc) { [pscustomobject]@{ CommandLine = $proc.CommandLine; ProcessName = $proc.Name } | ConvertTo-Json -Compress }`
+    );
+
+    if (!stdout.trim()) {
+      return {};
+    }
+
+    const parsed = JSON.parse(stdout) as { CommandLine?: unknown; ProcessName?: unknown };
+    return {
+      commandLine: typeof parsed.CommandLine === 'string' ? parsed.CommandLine : undefined,
+      processName: typeof parsed.ProcessName === 'string' ? parsed.ProcessName : undefined
+    };
+  } catch {
+    return {};
+  }
+}
+
+async function getUnixProcessCommandLine(pid: number): Promise<string | undefined> {
+  try {
+    const { stdout } = await execFileAsync(
+      'ps',
+      ['-p', String(pid), '-o', 'command='],
+      { timeout: HOOK_TIMEOUTS.POWERSHELL_COMMAND, windowsHide: true }
+    );
+
+    const commandLine = stdout.trim();
+    return commandLine.length > 0 ? commandLine : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+async function getWindowsPortOwner(port: number): Promise<PortOwnerInfo | null> {
+  try {
+    const stdout = await runPowerShell(
+      `$conn = Get-NetTCPConnection -LocalPort ${port} -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1; if ($conn) { [pscustomobject]@{ Pid = [int]$conn.OwningProcess } | ConvertTo-Json -Compress }`
+    );
+
+    if (stdout.trim()) {
+      const parsed = JSON.parse(stdout) as { Pid?: unknown };
+      const pid = typeof parsed.Pid === 'number' && Number.isInteger(parsed.Pid) && parsed.Pid > 0
+        ? parsed.Pid
+        : null;
+
+      if (pid) {
+        return { pid, ...(await getWindowsProcessMetadata(pid)) };
+      }
+    }
+  } catch {
+    // Fall back to netstat parsing below.
+  }
+
+  try {
+    const { stdout } = await execFileAsync(
+      'netstat',
+      ['-ano', '-p', 'tcp'],
+      { timeout: HOOK_TIMEOUTS.POWERSHELL_COMMAND, windowsHide: true }
+    );
+
+    const line = stdout
+      .split(/\r?\n/)
+      .map(entry => entry.trim())
+      .find(entry => {
+        if (!entry) return false;
+        const columns = entry.split(/\s+/);
+        if (columns.length < 5) return false;
+        const localAddress = columns[1] ?? '';
+        const state = columns[3]?.toUpperCase();
+        return localAddress.endsWith(`:${port}`) && state === 'LISTENING';
+      });
+
+    if (!line) {
+      return null;
+    }
+
+    const columns = line.split(/\s+/);
+    const pid = parsePositiveInteger(columns[4]);
+    if (!pid) {
+      return null;
+    }
+
+    return { pid, ...(await getWindowsProcessMetadata(pid)) };
+  } catch {
+    return null;
+  }
+}
+
+async function getUnixPortOwner(port: number): Promise<PortOwnerInfo | null> {
+  try {
+    const { stdout } = await execFileAsync(
+      'lsof',
+      ['-nP', `-iTCP:${port}`, '-sTCP:LISTEN', '-t'],
+      { timeout: HOOK_TIMEOUTS.POWERSHELL_COMMAND, windowsHide: true }
+    );
+
+    const pid = stdout
+      .split(/\r?\n/)
+      .map(line => parsePositiveInteger(line))
+      .find((value): value is number => value !== null);
+
+    if (pid) {
+      return {
+        pid,
+        commandLine: await getUnixProcessCommandLine(pid)
+      };
+    }
+  } catch {
+    // Fall back to ss parsing below.
+  }
+
+  try {
+    const { stdout } = await execAsync(
+      `ss -ltnp '( sport = :${port} )' || true`,
+      { timeout: HOOK_TIMEOUTS.POWERSHELL_COMMAND, windowsHide: true }
+    );
+
+    const match = stdout.match(/pid=(\d+)/);
+    const pid = parsePositiveInteger(match?.[1]);
+    if (!pid) {
+      return null;
+    }
+
+    return {
+      pid,
+      commandLine: await getUnixProcessCommandLine(pid)
+    };
+  } catch {
+    return null;
+  }
+}
+
+export async function getListeningPortOwner(port: number): Promise<PortOwnerInfo | null> {
+  if (!Number.isInteger(port) || port <= 0 || port > 65535) {
+    logger.warn('SYSTEM', 'Invalid port for ownership lookup', { port });
+    return null;
+  }
+
+  return process.platform === 'win32'
+    ? getWindowsPortOwner(port)
+    : getUnixPortOwner(port);
 }
 
 /**

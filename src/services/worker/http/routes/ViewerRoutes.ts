@@ -68,6 +68,12 @@ export class ViewerRoutes extends BaseRouteHandler {
    * SSE stream endpoint
    */
   private handleSSEStream = this.wrapHandler((req: Request, res: Response): void => {
+    if (this.sseBroadcaster.isShuttingDown()) {
+      res.setHeader('Connection', 'close');
+      res.status(503).json({ error: 'Service shutting down' });
+      return;
+    }
+
     // Guard: if DB is not yet initialized, return 503 before registering client
     try {
       this.dbManager.getSessionStore();

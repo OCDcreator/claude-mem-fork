@@ -47,8 +47,10 @@ import {
   runOneTimeChromaMigration,
   cleanStalePidFile,
   isProcessAlive,
+  forceKillProcess,
   spawnDaemon,
-  touchPidFile
+  touchPidFile,
+  getListeningPortOwner
 } from './infrastructure/ProcessManager.js';
 import {
   isPortInUse,
@@ -138,6 +140,7 @@ export class WorkerService {
   private mcpReady: boolean = false;
   private initializationCompleteFlag: boolean = false;
   private isShuttingDown: boolean = false;
+  private shutdownPromise: Promise<void> | null = null;
 
   // Service layer
   private dbManager: DatabaseManager;
@@ -959,31 +962,45 @@ export class WorkerService {
    * Shutdown the worker service
    */
   async shutdown(): Promise<void> {
-    if (this.transcriptWatcher) {
-      this.transcriptWatcher.stop();
-      this.transcriptWatcher = null;
-      logger.info('TRANSCRIPT', 'Transcript watcher stopped');
+    if (this.shutdownPromise) {
+      logger.info('SYSTEM', 'Shutdown already in progress, reusing existing promise');
+      return this.shutdownPromise;
     }
 
-    // Stop orphan reaper before shutdown (Issue #737)
-    if (this.stopOrphanReaper) {
-      this.stopOrphanReaper();
-      this.stopOrphanReaper = null;
-    }
+    this.isShuttingDown = true;
 
-    // Stop stale session reaper (Issue #1168)
-    if (this.staleSessionReaperInterval) {
-      clearInterval(this.staleSessionReaperInterval);
-      this.staleSessionReaperInterval = null;
-    }
+    this.shutdownPromise = (async () => {
+      this.sseBroadcaster.shutdown();
 
-    await performGracefulShutdown({
-      server: this.server.getHttpServer(),
-      sessionManager: this.sessionManager,
-      mcpClient: this.mcpClient,
-      dbManager: this.dbManager,
-      chromaMcpManager: this.chromaMcpManager || undefined
-    });
+      if (this.transcriptWatcher) {
+        this.transcriptWatcher.stop();
+        this.transcriptWatcher = null;
+        logger.info('TRANSCRIPT', 'Transcript watcher stopped');
+      }
+
+      // Stop orphan reaper before shutdown (Issue #737)
+      if (this.stopOrphanReaper) {
+        this.stopOrphanReaper();
+        this.stopOrphanReaper = null;
+      }
+
+      // Stop stale session reaper (Issue #1168)
+      if (this.staleSessionReaperInterval) {
+        clearInterval(this.staleSessionReaperInterval);
+        this.staleSessionReaperInterval = null;
+      }
+
+      await performGracefulShutdown({
+        server: this.server.getHttpServer(),
+        closeServer: () => this.server.close(),
+        sessionManager: this.sessionManager,
+        mcpClient: this.mcpClient,
+        dbManager: this.dbManager,
+        chromaMcpManager: this.chromaMcpManager || undefined
+      });
+    })();
+
+    return this.shutdownPromise;
   }
 
   /**
@@ -1032,6 +1049,70 @@ export async function ensureWorkerStarted(port: number): Promise<boolean> {
   return ensureWorkerStartedShared(port, __filename);
 }
 
+async function shutdownWorkerAndWaitForPort(
+  port: number,
+  reason: 'stop' | 'restart'
+): Promise<boolean> {
+  const pidInfoBeforeShutdown = readPidFile();
+  const targetPid = pidInfoBeforeShutdown?.pid;
+
+  await httpShutdown(port);
+
+  let freed = await waitForPortFree(port, getPlatformTimeout(15000));
+  if (freed) {
+    return true;
+  }
+
+  if (targetPid && isProcessAlive(targetPid)) {
+    logger.warn('SYSTEM', 'Worker did not release port after graceful shutdown, forcing process termination', {
+      reason,
+      port,
+      pid: targetPid
+    });
+
+    await forceKillProcess(targetPid);
+    freed = await waitForPortFree(port, getPlatformTimeout(10000));
+    if (freed) {
+      logger.info('SYSTEM', 'Worker port released after forced termination', {
+        reason,
+        port,
+        pid: targetPid
+      });
+      return true;
+    }
+  }
+
+  const portOwner = await getListeningPortOwner(port);
+  if (portOwner && portOwner.pid !== process.pid) {
+    logger.warn('SYSTEM', 'Port still occupied after graceful shutdown, forcing listening process termination', {
+      reason,
+      port,
+      pid: portOwner.pid,
+      processName: portOwner.processName,
+      commandLine: portOwner.commandLine
+    });
+
+    await forceKillProcess(portOwner.pid);
+    freed = await waitForPortFree(port, getPlatformTimeout(10000));
+    if (freed) {
+      logger.info('SYSTEM', 'Worker port released after killing port owner', {
+        reason,
+        port,
+        pid: portOwner.pid
+      });
+      return true;
+    }
+  }
+
+  logger.error('SYSTEM', 'Port did not free up after shutdown attempts', {
+    reason,
+    port,
+    pid: targetPid,
+    portOwnerPid: portOwner?.pid
+  });
+  return false;
+}
+
 // ============================================================================
 // CLI Entry Point
 // ============================================================================
@@ -1068,10 +1149,10 @@ async function main() {
     }
 
     case 'stop': {
-      await httpShutdown(port);
-      const freed = await waitForPortFree(port, getPlatformTimeout(15000));
+      const freed = await shutdownWorkerAndWaitForPort(port, 'stop');
       if (!freed) {
-        logger.warn('SYSTEM', 'Port did not free up after shutdown', { port });
+        logger.error('SYSTEM', 'Worker stop completed but port is still occupied', { port });
+        process.exit(0);
       }
       removePidFile();
       logger.info('SYSTEM', 'Worker stopped successfully');
@@ -1081,8 +1162,7 @@ async function main() {
 
     case 'restart': {
       logger.info('SYSTEM', 'Restarting worker');
-      await httpShutdown(port);
-      const restartFreed = await waitForPortFree(port, getPlatformTimeout(15000));
+      const restartFreed = await shutdownWorkerAndWaitForPort(port, 'restart');
       if (!restartFreed) {
         logger.error('SYSTEM', 'Port did not free up after shutdown, aborting restart', { port });
         process.exit(0);
