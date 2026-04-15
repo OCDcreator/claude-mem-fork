@@ -951,9 +951,38 @@ export function spawnDaemon(
       // success as failure here.
       return 0;
     } catch (error) {
-      // APPROVED OVERRIDE: Windows daemon spawn is best-effort; log and let callers fall back to health checks/retry flow.
-      logger.error('SYSTEM', 'Failed to spawn worker daemon on Windows', { runtimePath }, error as Error);
-      return undefined;
+      logger.warn(
+        'SYSTEM',
+        'PowerShell daemon spawn failed on Windows, falling back to detached child process spawn',
+        { runtimePath, scriptPath },
+        error as Error
+      );
+
+      try {
+        const child = spawn(runtimePath, [scriptPath, '--daemon'], {
+          detached: true,
+          stdio: 'ignore',
+          windowsHide: true,
+          env
+        });
+
+        if (child.pid === undefined) {
+          logger.error('SYSTEM', 'Windows detached spawn fallback did not return a PID', { runtimePath, scriptPath });
+          return undefined;
+        }
+
+        child.unref();
+        return child.pid;
+      } catch (fallbackError) {
+        // APPROVED OVERRIDE: Windows daemon spawn is best-effort; log and let callers fall back to health checks/retry flow.
+        logger.error(
+          'SYSTEM',
+          'Failed to spawn worker daemon on Windows',
+          { runtimePath, scriptPath },
+          fallbackError as Error
+        );
+        return undefined;
+      }
     }
   }
 
