@@ -16,6 +16,7 @@ export interface ContextInput {
   /** When true, return ALL observations with no limit */
   full?: boolean;
   platform_source?: string;
+  lang?: 'en' | 'zh';
   [key: string]: any;
 }
 

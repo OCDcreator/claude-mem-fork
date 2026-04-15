@@ -66,8 +66,8 @@ function initializeDatabase(): SessionStore | null {
 /**
  * Render empty state when no data exists
  */
-function renderEmptyState(project: string, forHuman: boolean): string {
-  return forHuman ? renderHumanEmptyState(project) : renderAgentEmptyState(project);
+function renderEmptyState(project: string, forHuman: boolean, lang: 'en' | 'zh' = 'en'): string {
+  return forHuman ? renderHumanEmptyState(project, lang) : renderAgentEmptyState(project);
 }
 
 /**
@@ -80,15 +80,17 @@ function buildContextOutput(
   config: ContextConfig,
   cwd: string,
   sessionId: string | undefined,
-  forHuman: boolean
+  forHuman: boolean,
+  lang: 'en' | 'zh' = 'en'
 ): string {
   const output: string[] = [];
+  const locale = lang === 'zh' ? 'zh-CN' : 'en-US';
 
   // Calculate token economics
   const economics = calculateTokenEconomics(observations);
 
   // Render header section
-  output.push(...renderHeader(project, economics, config, forHuman));
+  output.push(...renderHeader(project, economics, config, forHuman, lang));
 
   // Prepare timeline data
   const displaySummaries = summaries.slice(0, config.sessionCount);
@@ -97,22 +99,22 @@ function buildContextOutput(
   const fullObservationIds = getFullObservationIds(observations, config.fullObservationCount);
 
   // Render timeline
-  output.push(...renderTimeline(timeline, fullObservationIds, config, cwd, forHuman));
+  output.push(...renderTimeline(timeline, fullObservationIds, config, cwd, forHuman, locale, lang));
 
   // Render most recent summary if applicable
   const mostRecentSummary = summaries[0];
   const mostRecentObservation = observations[0];
 
   if (shouldShowSummary(config, mostRecentSummary, mostRecentObservation)) {
-    output.push(...renderSummaryFields(mostRecentSummary, forHuman));
+    output.push(...renderSummaryFields(mostRecentSummary, forHuman, lang));
   }
 
   // Render previously section (prior assistant message)
   const priorMessages = getPriorSessionMessages(observations, config, sessionId, cwd);
-  output.push(...renderPreviouslySection(priorMessages, forHuman));
+  output.push(...renderPreviouslySection(priorMessages, forHuman, lang));
 
   // Render footer
-  output.push(...renderFooter(economics, config, forHuman));
+  output.push(...renderFooter(economics, config, forHuman, lang));
 
   return output.join('\n').trimEnd();
 }
@@ -132,6 +134,7 @@ export async function generateContext(
   const context = getProjectContext(cwd);
   const project = context.primary;
   const platformSource = input?.platform_source;
+  const lang = input?.lang === 'zh' ? 'zh' : 'en';
 
   // Use provided projects array (for worktree support) or fall back to all known projects
   const projects = input?.projects ?? context.allProjects;
@@ -159,7 +162,7 @@ export async function generateContext(
 
     // Handle empty state
     if (observations.length === 0 && summaries.length === 0) {
-      return renderEmptyState(project, forHuman);
+      return renderEmptyState(project, forHuman, lang);
     }
 
     // Build and return context
@@ -170,7 +173,8 @@ export async function generateContext(
       config,
       cwd,
       input?.session_id,
-      forHuman
+      forHuman,
+      lang
     );
 
     return output;

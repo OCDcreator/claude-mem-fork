@@ -45,15 +45,16 @@ export function shouldShowSummary(
  */
 export function renderSummaryFields(
   summary: SessionSummary,
-  forHuman: boolean
+  forHuman: boolean,
+  lang: 'en' | 'zh' = 'en'
 ): string[] {
   const output: string[] = [];
 
   if (forHuman) {
-    output.push(...Human.renderHumanSummaryField('Investigated', summary.investigated, colors.blue));
-    output.push(...Human.renderHumanSummaryField('Learned', summary.learned, colors.yellow));
-    output.push(...Human.renderHumanSummaryField('Completed', summary.completed, colors.green));
-    output.push(...Human.renderHumanSummaryField('Next Steps', summary.next_steps, colors.magenta));
+    output.push(...Human.renderHumanSummaryField(Human.getHumanSummaryLabel('Investigated', lang), summary.investigated, colors.blue));
+    output.push(...Human.renderHumanSummaryField(Human.getHumanSummaryLabel('Learned', lang), summary.learned, colors.yellow));
+    output.push(...Human.renderHumanSummaryField(Human.getHumanSummaryLabel('Completed', lang), summary.completed, colors.green));
+    output.push(...Human.renderHumanSummaryField(Human.getHumanSummaryLabel('Next Steps', lang), summary.next_steps, colors.magenta));
   } else {
     output.push(...Agent.renderAgentSummaryField('Investigated', summary.investigated));
     output.push(...Agent.renderAgentSummaryField('Learned', summary.learned));

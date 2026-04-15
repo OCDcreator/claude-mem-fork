@@ -16,34 +16,35 @@ export function renderHeader(
   project: string,
   economics: TokenEconomics,
   config: ContextConfig,
-  forHuman: boolean
+  forHuman: boolean,
+  lang: 'en' | 'zh' = 'en'
 ): string[] {
   const output: string[] = [];
 
   // Main header
   if (forHuman) {
-    output.push(...Human.renderHumanHeader(project));
+    output.push(...Human.renderHumanHeader(project, lang));
   } else {
     output.push(...Agent.renderAgentHeader(project));
   }
 
   // Legend
   if (forHuman) {
-    output.push(...Human.renderHumanLegend());
+    output.push(...Human.renderHumanLegend(lang));
   } else {
     output.push(...Agent.renderAgentLegend());
   }
 
   // Column key
   if (forHuman) {
-    output.push(...Human.renderHumanColumnKey());
+    output.push(...Human.renderHumanColumnKey(lang));
   } else {
     output.push(...Agent.renderAgentColumnKey());
   }
 
   // Context index instructions
   if (forHuman) {
-    output.push(...Human.renderHumanContextIndex());
+    output.push(...Human.renderHumanContextIndex(lang));
   } else {
     output.push(...Agent.renderAgentContextIndex());
   }
@@ -51,7 +52,7 @@ export function renderHeader(
   // Context economics
   if (shouldShowContextEconomics(config)) {
     if (forHuman) {
-      output.push(...Human.renderHumanContextEconomics(economics, config));
+      output.push(...Human.renderHumanContextEconomics(economics, config, lang));
     } else {
       output.push(...Agent.renderAgentContextEconomics(economics, config));
     }

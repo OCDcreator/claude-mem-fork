@@ -11,23 +11,27 @@ import type {
   TimelineItem,
   SummaryTimelineItem,
 } from '../types.js';
-import { formatTime, formatDate, formatDateTime, extractFirstFile, parseJsonArray } from '../../../shared/timeline-formatting.js';
+import { formatTime, formatDateTime, formatTimeWithLocale, formatDateWithLocale, formatDateTimeWithLocale, extractFirstFile, parseJsonArray } from '../../../shared/timeline-formatting.js';
 import * as Agent from '../formatters/AgentFormatter.js';
 import * as Human from '../formatters/HumanFormatter.js';
 
 /**
  * Group timeline items by day
  */
-export function groupTimelineByDay(timeline: TimelineItem[]): Map<string, TimelineItem[]> {
-  const itemsByDay = new Map<string, TimelineItem[]>();
+export function groupTimelineByDay(timeline: TimelineItem[], locale: string = 'en-US'): Map<string, TimelineItem[]> {
+  const itemsByDay = new Map<string, { label: string; items: TimelineItem[] }>();
 
   for (const item of timeline) {
     const itemDate = item.type === 'observation' ? item.data.created_at : item.data.displayTime;
-    const day = formatDate(itemDate);
-    if (!itemsByDay.has(day)) {
-      itemsByDay.set(day, []);
+    const date = new Date(itemDate);
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const dayOfMonth = String(date.getDate()).padStart(2, '0');
+    const dayKey = `${date.getFullYear()}-${month}-${dayOfMonth}`;
+    const dayLabel = formatDateWithLocale(itemDate, locale);
+    if (!itemsByDay.has(dayKey)) {
+      itemsByDay.set(dayKey, { label: dayLabel, items: [] });
     }
-    itemsByDay.get(day)!.push(item);
+    itemsByDay.get(dayKey)!.items.push(item);
   }
 
   // Sort days chronologically
@@ -37,7 +41,7 @@ export function groupTimelineByDay(timeline: TimelineItem[]): Map<string, Timeli
     return aDate - bDate;
   });
 
-  return new Map(sortedEntries);
+  return new Map(sortedEntries.map(([, value]) => [value.label, value.items]));
 }
 
 /**
@@ -100,6 +104,8 @@ function renderDayTimelineHuman(
   fullObservationIds: Set<number>,
   config: ContextConfig,
   cwd: string,
+  locale: string,
+  lang: 'en' | 'zh',
 ): string[] {
   const output: string[] = [];
 
@@ -114,12 +120,12 @@ function renderDayTimelineHuman(
       lastTime = '';
 
       const summary = item.data as SummaryTimelineItem;
-      const formattedTime = formatDateTime(summary.displayTime);
-      output.push(...Human.renderHumanSummaryItem(summary, formattedTime));
+      const formattedTime = formatDateTimeWithLocale(summary.displayTime, locale);
+      output.push(...Human.renderHumanSummaryItem(summary, formattedTime, lang));
     } else {
       const obs = item.data as Observation;
       const file = extractFirstFile(obs.files_modified, cwd, obs.files_read);
-      const time = formatTime(obs.created_at);
+      const time = formatTimeWithLocale(obs.created_at, locale);
       const showTime = time !== lastTime;
       lastTime = time;
 
@@ -154,10 +160,12 @@ export function renderDayTimeline(
   fullObservationIds: Set<number>,
   config: ContextConfig,
   cwd: string,
-  forHuman: boolean
+  forHuman: boolean,
+  locale: string = 'en-US',
+  lang: 'en' | 'zh' = 'en'
 ): string[] {
   if (forHuman) {
-    return renderDayTimelineHuman(day, dayItems, fullObservationIds, config, cwd);
+    return renderDayTimelineHuman(day, dayItems, fullObservationIds, config, cwd, locale, lang);
   }
   return renderDayTimelineAgent(day, dayItems, fullObservationIds, config);
 }
@@ -170,13 +178,15 @@ export function renderTimeline(
   fullObservationIds: Set<number>,
   config: ContextConfig,
   cwd: string,
-  forHuman: boolean
+  forHuman: boolean,
+  locale: string = 'en-US',
+  lang: 'en' | 'zh' = 'en'
 ): string[] {
   const output: string[] = [];
-  const itemsByDay = groupTimelineByDay(timeline);
+  const itemsByDay = groupTimelineByDay(timeline, locale);
 
   for (const [day, dayItems] of itemsByDay) {
-    output.push(...renderDayTimeline(day, dayItems, fullObservationIds, config, cwd, forHuman));
+    output.push(...renderDayTimeline(day, dayItems, fullObservationIds, config, cwd, forHuman, locale, lang));
   }
 
   return output;

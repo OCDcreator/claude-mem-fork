@@ -39,6 +39,17 @@ export function formatDateTime(dateInput: string | number): string {
   });
 }
 
+export function formatDateTimeWithLocale(dateInput: string | number, locale: string = 'en-US'): string {
+  const date = new Date(dateInput);
+  return date.toLocaleString(locale, {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true
+  });
+}
+
 /**
  * Format just time, no date (e.g., "7:30 PM")
  * Accepts either ISO date string or epoch milliseconds
@@ -52,6 +63,15 @@ export function formatTime(dateInput: string | number): string {
   });
 }
 
+export function formatTimeWithLocale(dateInput: string | number, locale: string = 'en-US'): string {
+  const date = new Date(dateInput);
+  return date.toLocaleString(locale, {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true
+  });
+}
+
 /**
  * Format just date (e.g., "Dec 14, 2025")
  * Accepts either ISO date string or epoch milliseconds
@@ -59,6 +79,15 @@ export function formatTime(dateInput: string | number): string {
 export function formatDate(dateInput: string | number): string {
   const date = new Date(dateInput);
   return date.toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric'
+  });
+}
+
+export function formatDateWithLocale(dateInput: string | number, locale: string = 'en-US'): string {
+  const date = new Date(dateInput);
+  return date.toLocaleString(locale, {
     month: 'short',
     day: 'numeric',
     year: 'numeric'

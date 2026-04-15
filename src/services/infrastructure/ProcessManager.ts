@@ -11,7 +11,7 @@
 import path from 'path';
 import { homedir } from 'os';
 import { existsSync, writeFileSync, readFileSync, unlinkSync, mkdirSync, rmSync, statSync, utimesSync } from 'fs';
-import { exec, execSync, spawn } from 'child_process';
+import { exec, execFile, execSync, spawn } from 'child_process';
 import { promisify } from 'util';
 import { logger } from '../../utils/logger.js';
 import { HOOK_TIMEOUTS } from '../../shared/hook-constants.js';
@@ -19,6 +19,7 @@ import { sanitizeEnv } from '../../supervisor/env-sanitizer.js';
 import { getSupervisor, validateWorkerPidFile, type ValidateWorkerPidStatus } from '../../supervisor/index.js';
 
 const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 // Standard paths for PID file management
 const DATA_DIR = path.join(homedir(), '.claude-mem');
@@ -357,6 +358,16 @@ export function parseElapsedTime(etime: string): number {
   return -1;
 }
 
+async function runPowerShell(command: string): Promise<string> {
+  const { stdout } = await execFileAsync(
+    'powershell',
+    ['-NoProfile', '-NonInteractive', '-Command', command],
+    { timeout: HOOK_TIMEOUTS.POWERSHELL_COMMAND, windowsHide: true }
+  );
+
+  return stdout;
+}
+
 /**
  * Clean up orphaned claude-mem processes from previous worker sessions
  *
@@ -380,8 +391,9 @@ export async function cleanupOrphanedProcesses(): Promise<void> {
         .map(p => `CommandLine LIKE '%${p}%'`)
         .join(' OR ');
 
-      const cmd = `powershell -NoProfile -NonInteractive -Command "Get-CimInstance Win32_Process -Filter '(${wqlPatternConditions}) AND ProcessId != ${currentPid}' | Select-Object ProcessId, CreationDate | ConvertTo-Json"`;
-      const { stdout } = await execAsync(cmd, { timeout: HOOK_TIMEOUTS.POWERSHELL_COMMAND, windowsHide: true });
+      const stdout = await runPowerShell(
+        `Get-CimInstance Win32_Process -Filter "(${wqlPatternConditions}) AND ProcessId != ${currentPid}" | Select-Object ProcessId, CreationDate | ConvertTo-Json`
+      );
 
       if (!stdout.trim() || stdout.trim() === 'null') {
         logger.debug('SYSTEM', 'No orphaned claude-mem processes found (Windows)');
@@ -530,8 +542,9 @@ export async function aggressiveStartupCleanup(): Promise<void> {
         .map(p => `CommandLine LIKE '%${p}%'`)
         .join(' OR ');
 
-      const cmd = `powershell -NoProfile -NonInteractive -Command "Get-CimInstance Win32_Process -Filter '(${wqlPatternConditions}) AND ProcessId != ${currentPid}' | Select-Object ProcessId, CommandLine, CreationDate | ConvertTo-Json"`;
-      const { stdout } = await execAsync(cmd, { timeout: HOOK_TIMEOUTS.POWERSHELL_COMMAND, windowsHide: true });
+      const stdout = await runPowerShell(
+        `Get-CimInstance Win32_Process -Filter "(${wqlPatternConditions}) AND ProcessId != ${currentPid}" | Select-Object ProcessId, CommandLine, CreationDate | ConvertTo-Json`
+      );
 
       if (!stdout.trim() || stdout.trim() === 'null') {
         logger.debug('SYSTEM', 'No orphaned claude-mem processes found (Windows)');

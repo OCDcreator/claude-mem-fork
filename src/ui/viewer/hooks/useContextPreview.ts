@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { ProjectCatalog, Settings } from '../types';
+import { useI18n } from '../context/I18nContext';
 
 interface UseContextPreviewResult {
   preview: string;
@@ -26,6 +27,7 @@ function withDefaultSources(sources: string[]): string[] {
 }
 
 export function useContextPreview(settings: Settings): UseContextPreviewResult {
+  const { lang } = useI18n();
   const [preview, setPreview] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -95,6 +97,7 @@ export function useContextPreview(settings: Settings): UseContextPreviewResult {
     if (selectedSource) {
       params.append('platformSource', selectedSource);
     }
+    params.append('lang', lang);
 
     try {
       const response = await fetch(`/api/context/preview?${params}`);
@@ -110,7 +113,7 @@ export function useContextPreview(settings: Settings): UseContextPreviewResult {
     }
 
     setIsLoading(false);
-  }, [selectedProject, selectedSource]);
+  }, [selectedProject, selectedSource, lang]);
 
   // Debounced refresh when settings or selectedProject change
   useEffect(() => {

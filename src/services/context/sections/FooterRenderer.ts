@@ -14,10 +14,11 @@ import * as Human from '../formatters/HumanFormatter.js';
  */
 export function renderPreviouslySection(
   priorMessages: PriorMessages,
-  forHuman: boolean
+  forHuman: boolean,
+  lang: 'en' | 'zh' = 'en'
 ): string[] {
   if (forHuman) {
-    return Human.renderHumanPreviouslySection(priorMessages);
+    return Human.renderHumanPreviouslySection(priorMessages, lang);
   }
   return Agent.renderAgentPreviouslySection(priorMessages);
 }
@@ -28,7 +29,8 @@ export function renderPreviouslySection(
 export function renderFooter(
   economics: TokenEconomics,
   config: ContextConfig,
-  forHuman: boolean
+  forHuman: boolean,
+  lang: 'en' | 'zh' = 'en'
 ): string[] {
   // Only show footer if we have savings to display
   if (!shouldShowContextEconomics(config) || economics.totalDiscoveryTokens <= 0 || economics.savings <= 0) {
@@ -36,7 +38,7 @@ export function renderFooter(
   }
 
   if (forHuman) {
-    return Human.renderHumanFooter(economics.totalDiscoveryTokens, economics.totalReadTokens);
+    return Human.renderHumanFooter(economics.totalDiscoveryTokens, economics.totalReadTokens, lang);
   }
   return Agent.renderAgentFooter(economics.totalDiscoveryTokens, economics.totalReadTokens);
 }
