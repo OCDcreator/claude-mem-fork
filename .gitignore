@@ -38,3 +38,7 @@ src/ui/viewer.html
 
 # Local contribution analysis (not part of upstream)
 CONTRIB_NOTES.md
+
+# Local Windows network diagnostics
+sysports.xml
+wfpstate.xml
